@@ -13,10 +13,10 @@ graph25 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name
 
 # Funzione per calcolare l'intervallo di confidenza
 def calculate_confidence_interval(data, confidence=0.95):
-    n = len(data)  # Numero di osservazioni
-    average_value = np.average(data)  # Valore medio
-    stderr = stats.sem(data)  # Errore standard della media
-    margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)  # Margine di errore
+    n = len(data)
+    average_value = np.average(data)
+    stderr = stats.sem(data)
+    margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)
     return average_value, margin_of_error
 
 # Funzione per misurare le performance di una query
@@ -24,67 +24,58 @@ def measure_query_performance(graph, query_func, percentage, iterations=30):
     subsequent_times = []
     
     for _ in range(iterations):
-        start_time = time.time()  # Tempo di inizio
-        query_func(graph)  # Esecuzione della query
-        end_time = time.time()  # Tempo di fine
-        execution_time = (end_time - start_time) * 1000  # Tempo di esecuzione in millisecondi
+        start_time = time.time()
+        query_func(graph)
+        end_time = time.time()
+        execution_time = (end_time - start_time) * 1000
         subsequent_times.append(execution_time)
     
-    # Calcolo dell'intervallo di confidenza per i tempi di esecuzione
     average, margin_of_error = calculate_confidence_interval(subsequent_times)
     average_subsequent_time = round(sum(subsequent_times) / len(subsequent_times), 2)
     
     return average_subsequent_time, average, margin_of_error
 
-# Definizione della query 1
+# Definizione delle query
+
+# Query 1: Recupera tutti i nodi Patient
 def query1(graph):
-    company_name = 'Pittman Ltd'
-    query = f"""
-    MATCH (c:Companies {{name: '{company_name}'}})
-    RETURN c
+    query = """
+    MATCH (p:Patient)
+    RETURN p
+    LIMIT 10
     """
-    result = graph.run(query).data()  # Esecuzione della query e recupero dei dati
+    result = graph.run(query).data()
     return result
 
-# Definizione della query 2
+# Query 2: Recupera i nodi Patient e le loro visite
 def query2(graph):
-    company_id = 5312
-    query = f"""
-    MATCH (c:Companies {{id: {company_id}}})
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_ADMINISTRATOR]->(a:Administrators)
-    RETURN c, collect(a) as administrators
+    query = """
+    MATCH (p:Patient)-[:VISIT_BY]->(v:Visit)
+    RETURN p, collect(v) as visits
+    LIMIT 10
     """
-    result = graph.run(query).data()  # Esecuzione della query e recupero dei dati
+    result = graph.run(query).data()
     return result
 
-# Definizione della query 3
+# Query 3: Recupera i nodi Patient, le loro visite e i medici che li hanno visitati
 def query3(graph):
-    company_id = 5312
-    query = f"""
-    MATCH (c:Companies {{id: {company_id}}})
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_ADMINISTRATOR]->(a:Administrators)
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_UBO]->(u:Ubo)
-    WHERE u.ownership_percentage > 25
-    RETURN c, collect(a) as administrators, collect(u) as ubos
+    query = """
+    MATCH (p:Patient)-[:VISIT_BY]->(v:Visit)-[:VISITED_BY]->(d:Doctor)
+    RETURN p, collect(v) as visits, collect(d) as doctors
+    LIMIT 10
     """
-    result = graph.run(query).data()  # Esecuzione della query e recupero dei dati
+    result = graph.run(query).data()
     return result
 
-# Definizione della query 4
+# Query 4: Recupera i nodi Patient, le loro visite, i medici che li hanno visitati e le prescrizioni
 def query4(graph):
-    company_id = 5312
-    start_date = "2022-01-01"
-    end_date = "2022-12-31"
-    query = f"""
-    MATCH (c:Companies {{id: {company_id}}})
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_ADMINISTRATOR]->(a:Administrators)
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_UBO]->(u:Ubo)
-    WHERE u.ownership_percentage > 25
-    OPTIONAL MATCH (c)-[:COMPANY_HAS_TRANSACTION]->(t:Transactions)
-    WHERE t.date >= date('{start_date}') AND t.date <= date('{end_date}')
-    RETURN c, collect(a) as administrators, collect(u) as ubos, sum(t.amount) as total_amount
+    query = """
+    MATCH (p:Patient)-[:VISIT_BY]->(v:Visit)-[:VISITED_BY]->(d:Doctor)
+    OPTIONAL MATCH (v)-[:PRESCRIBED]->(pr:Prescription)
+    RETURN p, collect(v) as visits, collect(d) as doctors, collect(pr) as prescriptions
+    LIMIT 10
     """
-    result = graph.run(query).data()  # Esecuzione della query e recupero dei dati
+    result = graph.run(query).data()
     return result
 
 def main():
@@ -96,23 +87,23 @@ def main():
         '25%': graph25
     }
     
-    response_times_first_execution = {}  # Dizionario per i tempi di risposta della prima esecuzione
-    average_response_times = {}  # Dizionario per i tempi di risposta medi
+    response_times_first_execution = {}
+    average_response_times = {}
 
     for percentage, graph in graphs.items():
         print(f"\nAnalysis for percentage: {percentage}\n")
 
         # Query 1
         start_time = time.time()
-        query_result = query1(graph)  # Esecuzione della query
+        query_result = query1(graph)
         if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)  # Conversione in JSON
+            json_result = json.dumps(query_result, indent=4, default=str)
             print(f"Query 1 Result: \n{json_result}\n")
         else:
-            print(f"No company found with the specified name\n")
+            print(f"No patients found\n")
 
         end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)  # Tempo di esecuzione della prima query
+        time_first_execution = round((end_time - start_time) * 1000, 2)
         print(f"Response time (first execution - Query 1): {time_first_execution} ms")
         response_times_first_execution[f"{percentage} - Query 1"] = time_first_execution
 
@@ -123,15 +114,15 @@ def main():
 
         # Query 2
         start_time = time.time()
-        query_result = query2(graph)  # Esecuzione della query
+        query_result = query2(graph)
         if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)  # Conversione in JSON
+            json_result = json.dumps(query_result, indent=4, default=str)
             print(f"Query 2 Result: \n{json_result}\n")
         else:
-            print(f"No company found with the specified ID\n")
+            print(f"No patients found with visits\n")
 
         end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)  # Tempo di esecuzione della prima query
+        time_first_execution = round((end_time - start_time) * 1000, 2)
         print(f"Response time (first execution - Query 2): {time_first_execution} ms")
         response_times_first_execution[f"{percentage} - Query 2"] = time_first_execution
 
@@ -142,15 +133,15 @@ def main():
 
         # Query 3
         start_time = time.time()
-        query_result = query3(graph)  # Esecuzione della query
+        query_result = query3(graph)
         if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)  # Conversione in JSON
+            json_result = json.dumps(query_result, indent=4, default=str)
             print(f"Query 3 Result: \n{json_result}\n")
         else:
-            print(f"No company found with the specified ID\n")
+            print(f"No patients found with visits and doctors\n")
 
         end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)  # Tempo di esecuzione della prima query
+        time_first_execution = round((end_time - start_time) * 1000, 2)
         print(f"Response time (first execution - Query 3): {time_first_execution} ms")
         response_times_first_execution[f"{percentage} - Query 3"] = time_first_execution
 
@@ -161,15 +152,15 @@ def main():
 
         # Query 4
         start_time = time.time()
-        query_result = query4(graph)  # Esecuzione della query
+        query_result = query4(graph)
         if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)  # Conversione in JSON
+            json_result = json.dumps(query_result, indent=4, default=str)
             print(f"Query 4 Result: \n{json_result}\n")
         else:
-            print(f"No company found with the specified ID\n")
+            print(f"No patients found with visits, doctors, and prescriptions\n")
 
         end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)  # Tempo di esecuzione della prima query
+        time_first_execution = round((end_time - start_time) * 1000, 2)
         print(f"Response time (first execution - Query 4): {time_first_execution} ms")
         response_times_first_execution[f"{percentage} - Query 4"] = time_first_execution
 
