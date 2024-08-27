@@ -1,6 +1,7 @@
 import random
 import csv
 from faker import Faker
+import os
 
 # Crea un'istanza del generatore di dati falsi
 fake = Faker()
@@ -10,6 +11,10 @@ NUM_PATIENTS = 1000
 NUM_DOCTORS = 200
 NUM_PROCEDURES = 50
 NUM_VISITS = 2000
+
+# Crea la directory 'Dataset' se non esiste
+if not os.path.exists('Dataset'):
+    os.makedirs('Dataset')
 
 # Genera i dati per i pazienti
 patients = []
@@ -118,17 +123,17 @@ for visit_id in range(1, NUM_VISITS + 1):
     duration = generate_visit_duration()
     visits.append({
         'id': visit_id,
+        'date': date,
+        'cost': cost,
         'patient_id': patient_id,
         'doctor_id': doctor_id,
         'procedure_id': procedure_id,
-        'date': date,
-        'cost': cost,
         'duration': duration
     })
 
 # Scrivi i dati delle visite in un file CSV
 with open('Dataset/visits.csv', 'w', newline='') as csvfile:
-    fieldnames = ['id', 'patient_id', 'doctor_id', 'procedure_id', 'date', 'cost', 'duration']
+    fieldnames = ['id', 'date', 'cost', 'patient_id', 'doctor_id', 'procedure_id', 'duration']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(visits)

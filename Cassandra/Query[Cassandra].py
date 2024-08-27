@@ -49,10 +49,39 @@ def process_datasets():
 
     # Livello di complessità Non Onerosità
     queries = {
-        'Query 1': "SELECT * FROM visits ALLOW FILTERING;",
-        'Query 2': "SELECT doctor_id, date, cost FROM visits WHERE date >= '2021-01-01' AND date <= '2023-12-31' AND cost >= 500 ALLOW FILTERING;",
-        'Query 3': "SELECT * FROM patient_visits WHERE procedure_name >= 'C' AND procedure_name < 'D' AND visit_date >= '2019-01-01' ALLOW FILTERING;",
-        'Query 4': "SELECT * FROM patient_visits WHERE visit_date >= '2012-01-01' AND procedure_name >= 'C' AND procedure_name < 'D' AND visit_duration > 60 AND doctor_name >= 'J' AND doctor_name < 'K' ALLOW FILTERING;"
+        'Query 1': """
+            SELECT patient_id, SUM(visit_count) AS total_visits 
+            FROM patient_visit_counts 
+            WHERE visit_date >= '2021-01-01' 
+            AND visit_date <= '2023-12-31' 
+            GROUP BY patient_id
+            ALLOW FILTERING;
+        """,
+        'Query 2': """
+            SELECT doctor_id, specialization, SUM(visit_count) AS total_visits 
+            FROM doctor_visits 
+            WHERE visit_date >= '2021-01-01'
+            AND visit_date <= '2023-12-31'
+            GROUP BY doctor_id, specialization
+            ALLOW FILTERING;
+        """,
+        'Query 3': """
+            SELECT procedure_id, doctor_specialization, 
+            SUM(procedure_count) AS total_procedures 
+            FROM procedure_visit_stats
+            WHERE visit_date >= '2021-01-01' 
+            AND visit_date <= '2023-12-31'
+            GROUP BY procedure_id, doctor_specialization
+            ALLOW FILTERING;
+        """,
+        'Query 4': """
+            SELECT doctor_id, COUNT(*) AS total_patients
+            FROM doctor_patient_counts 
+            WHERE visit_date >= '2021-01-01'
+            AND visit_date <= '2023-12-31'
+            GROUP BY doctor_id
+            ALLOW FILTERING;
+        """
     }
 
     # Creazione della cartella ResponseTimes all'interno della directory corrente
