@@ -46,30 +46,28 @@ def process_datasets():
 
     queries = {
         'Query 1': """
-        MATCH (v:Visit)
-        RETURN v
+        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)
+        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
+        WITH p, COUNT(v) AS total_visits
+        RETURN p.id AS patient_id, total_visits
         """,
         'Query 2': """ 
-        MATCH (v:Visit)-[:VISIT_TO]->(d:Doctor)
-        WHERE v.date >= '2021-01-01'
-        AND v.date <= '2023-12-31'
-        AND v.cost >= 500
-        RETURN d.id AS doctorId, v.date AS date, v.cost AS cost
+        MATCH (d:Doctor)-[:VISIT_TO]-(v:Visit)
+        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
+        WITH d, d.specialization AS specialization, COUNT(v) AS total_visits
+        RETURN d.id AS doctor_id, specialization, total_visits
         """,
         'Query 3': """
-        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)-[:INCLUDES_PROCEDURE]-(pr:Procedure)
-        WHERE pr.description STARTS WITH 'C' 
-        AND v.date >= '2021-01-01'
-        RETURN p, v, pr
+        MATCH (v:Visit)-[:INCLUDES_PROCEDURE]-(proc:Procedure)
+        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
+        WITH proc, proc.description AS description, COUNT(v) AS total_procedures
+        RETURN proc.id AS procedure_id, description, total_procedures
         """,
         'Query 4': """
-        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)-[:INCLUDES_PROCEDURE]-(pr:Procedure)
-        MATCH (v)-[:VISIT_TO]-(d:Doctor)
-        WHERE pr.description STARTS WITH 'P'
-        AND v.date >= '2012-01-01'
-        AND d.name STARTS WITH "J"
-        AND v.duration >= 60
-        RETURN p, v, pr,d
+        MATCH (d:Doctor)-[:VISIT_TO]-(v:Visit)-[:VISIT_BY]-(p:Patient)
+        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
+        WITH d, COUNT(DISTINCT p) AS total_patients
+        RETURN d.id AS doctor_id, total_patients
         """
     }
 
