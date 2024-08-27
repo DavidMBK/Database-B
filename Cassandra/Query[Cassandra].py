@@ -1,20 +1,38 @@
-import json
 import time
 import csv
 from cassandra.cluster import Cluster
-from uuid import UUID
 import numpy as np
+import os
 import scipy.stats as stats
-from cassandra.query import dict_factory
-from datetime import datetime
 
-# Funzione per convertire in modo sicuro i dati in JSON
-def safe_serialize(obj):
-    if isinstance(obj, UUID):
-        return str(obj)
-    if isinstance(obj, datetime):
-        return obj.isoformat()  # Converte la data in una stringa ISO
-    raise TypeError(f"Type {type(obj)} not serializable")
+# Configurazione della connessione al cluster Cassandra
+contact_points = ['127.0.0.1']  # Cambia con il tuo indirizzo del nodo Cassandra
+keyspace_mappings = {
+    "25%": "healthcare_25",
+    "50%": "healthcare_50",
+    "75%": "healthcare_75",
+    "100%": "healthcare_100"
+}
+
+# Creazione della classe per gestire la connessione e le query
+class CassandraConnection:
+    def __init__(self, contact_points, keyspace):
+        self._cluster = Cluster(contact_points)
+        self._session = self._cluster.connect()
+        self._session.set_keyspace(keyspace)
+
+    def close(self):
+        self._cluster.shutdown()
+
+    def execute_query(self, query):
+        return self._session.execute(query)
+
+# Funzione per eseguire la query e misurare il tempo di esecuzione
+def measure_query_time(session, query):
+    start_time = time.perf_counter()  # Uso di perf_counter per maggiore precisione
+    session.execute(query)
+    end_time = time.perf_counter()
+    return (end_time - start_time) * 1000  # Conversione in millisecondi
 
 # Funzione per calcolare l'intervallo di confidenza
 def calculate_confidence_interval(data, confidence=0.95):
@@ -24,158 +42,83 @@ def calculate_confidence_interval(data, confidence=0.95):
     margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)
     return average_value, margin_of_error
 
-# Funzione per misurare le performance di una query
-def measure_query_performance(session, query_func, iterations=30):
-    subsequent_times = []
-    
-    for _ in range(iterations):
-        start_time = time.time()
-        query_func(session)
-        end_time = time.time()
-        execution_time = (end_time - start_time) * 1000  # Tempo in millisecondi
-        subsequent_times.append(execution_time)
-    
-    average, margin_of_error = calculate_confidence_interval(subsequent_times)
-    average_subsequent_time = round(np.mean(subsequent_times), 2)
-    
-    return average_subsequent_time, average, margin_of_error
+# Funzione per eseguire la query su tutti i dataset e salvare i risultati nei CSV
+def process_datasets():
+    all_response_times = []  # Lista per memorizzare i risultati di tutte le query
+    first_execution_times = []  # Lista per memorizzare i tempi della prima esecuzione
 
-# Connessione al cluster Cassandra
-def create_session(contact_points, keyspace):
-    cluster = Cluster(contact_points)
-    session = cluster.connect()
-    session.set_keyspace(keyspace)
-    session.row_factory = dict_factory  # Restituisce i risultati come dizionari
-    return session
-
-# Definizione delle query
-def query1(session):
-    query = "SELECT * FROM patient_visits;"
-    return session.execute(query)
-
-def query2(session):
-    query = "SELECT * FROM patient_visits WHERE doctor_name >= 'N' AND doctor_name < 'Z' ALLOW FILTERING;"
-    return session.execute(query)
-
-def query3(session):
-    query = "SELECT * FROM patient_visits WHERE visit_date >= '2021-01-01' AND procedure_name = 'Reactive 24/7 productivity' ALLOW FILTERING;"
-    return session.execute(query)
-
-def query4(session):
-    query = """
-    SELECT * FROM patient_visits
-    WHERE visit_date >= '2021-01-01' AND procedure_name = 'Reverse-engineered homogeneous standardization' AND visit_duration > 60
-    ALLOW FILTERING;
-    """
-    return session.execute(query)
-
-def main():
-    # Configurazione della connessione
-    contact_points = ['127.0.0.1']  # Cambia con il tuo indirizzo del nodo Cassandra
-    keyspaces = {
-        '25%': 'healthcare_25',
-        '50%': 'healthcare_50',
-        '75%': 'healthcare_75',
-        '100%': 'healthcare_100'
+    # Livello di complessità Non Onerosità
+    queries = {
+        'Query 1': "SELECT * FROM visits ALLOW FILTERING;",
+        'Query 2': "SELECT doctor_id, date, cost FROM visits WHERE date >= '2021-01-01' AND date <= '2023-12-31' AND cost >= 500 ALLOW FILTERING;",
+        'Query 3': "SELECT * FROM patient_visits WHERE procedure_name >= 'C' AND procedure_name < 'D' AND visit_date >= '2019-01-01' ALLOW FILTERING;",
+        'Query 4': "SELECT * FROM patient_visits WHERE visit_date >= '2012-01-01' AND procedure_name >= 'C' AND procedure_name < 'D' AND visit_duration > 60 AND doctor_name >= 'J' AND doctor_name < 'K' ALLOW FILTERING;"
     }
-    
-    response_times_first_execution = {}
-    average_response_times = {}
 
-    for percentage, keyspace in keyspaces.items():
-        print(f"\nAnalysis for keyspace: {keyspace}\n")
+    # Creazione della cartella ResponseTimes all'interno della directory corrente
+    output_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ResponseTimes')
+    os.makedirs(output_directory, exist_ok=True)
+
+    for percent, keyspace in keyspace_mappings.items():
+        db = CassandraConnection(contact_points, keyspace)
         
-        # Crea sessione per il keyspace corrente
-        session = create_session(contact_points, keyspace)
+        for query_name, query in queries.items():
+            response_times = []
 
-        # Query 1
-        try:
-            start_time = time.time()
-            query_result = query1(session)
-            json_result = json.dumps([dict(row) for row in query_result], indent=4, default=safe_serialize)
-            print(f"Query 1 Result: \n{json_result}\n")
-            end_time = time.time()
-            time_first_execution = round((end_time - start_time) * 1000, 2)
-            print(f"Response time (first execution - Query 1): {time_first_execution} ms")
-            response_times_first_execution[f"{percentage} - Query 1"] = time_first_execution
+            # Esecuzione della query 31 volte con un breve ritardo tra le esecuzioni
+            for i in range(31):
+                elapsed_time = measure_query_time(db._session, query)
+                if i == 0:
+                    # La prima esecuzione viene registrata separatamente
+                    first_execution_time = elapsed_time
+                else:
+                    # Le successive 30 esecuzioni sono registrate per il calcolo della media
+                    response_times.append(elapsed_time)
+                print(f"Dataset: {percent} - {query_name} execution {i+1}: {elapsed_time:.2f} ms")
+                time.sleep(0.001)  # Ritardo di 1 millisecondo tra le esecuzioni
 
-            average_subsequent_time, average, margin_of_error = measure_query_performance(session, query1)
-            print(f"Average time of 30 subsequent executions (Query 1): {average_subsequent_time} ms")
-            print(f"Confidence Interval (Query 1): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-            average_response_times[f"{percentage} - Query 1"] = (average_subsequent_time, average, margin_of_error)
-        except Exception as e:
-            print(f"Error executing Query 1: {e}")
+            # Calcolo delle statistiche per le 30 esecuzioni successive
+            if response_times:
+                average_time_exact = np.mean(response_times)  # Media esatta
+                average_time_rounded = round(average_time_exact, 2)  # Media arrotondata
+                average, margin_of_error = calculate_confidence_interval(response_times)
+                confidence_interval = (average - margin_of_error, average + margin_of_error)
+            else:
+                average_time_rounded = average = margin_of_error = confidence_interval = None
 
-        # Query 2
-        try:
-            start_time = time.time()
-            query_result = query2(session)
-            json_result = json.dumps([dict(row) for row in query_result], indent=4, default=safe_serialize)
-            print(f"Query 2 Result: \n{json_result}\n")
-            end_time = time.time()
-            time_first_execution = round((end_time - start_time) * 1000, 2)
-            print(f"Response time (first execution - Query 2): {time_first_execution} ms")
-            response_times_first_execution[f"{percentage} - Query 2"] = time_first_execution
+            # Aggiungi i risultati alla lista di tutti i risultati
+            all_response_times.append({
+                'Dataset': percent,
+                'Query': query_name,
+                'Average of 30 Executions (ms)': f"{average_time_rounded:.2f}" if average_time_rounded is not None else 'N/A',
+                'Average Time (ms)': f"{average:.6f}" if average is not None else 'N/A',
+                'Confidence Interval (Min, Max)': f"({confidence_interval[0]:.2f}, {confidence_interval[1]:.2f})" if confidence_interval is not None else 'N/A'
+            })
 
-            average_subsequent_time, average, margin_of_error = measure_query_performance(session, query2)
-            print(f"Average time of 30 subsequent executions (Query 2): {average_subsequent_time} ms")
-            print(f"Confidence Interval (Query 2): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-            average_response_times[f"{percentage} - Query 2"] = (average_subsequent_time, average, margin_of_error)
-        except Exception as e:
-            print(f"Error executing Query 2: {e}")
+            # Scrittura del tempo della prima esecuzione
+            first_execution_times.append({
+                'Dataset': percent,
+                'Query': query_name,
+                'First Execution Time (ms)': f"{first_execution_time:.2f}"
+            })
 
-        # Query 3
-        try:
-            start_time = time.time()
-            query_result = query3(session)
-            json_result = json.dumps([dict(row) for row in query_result], indent=4, default=safe_serialize)
-            print(f"Query 3 Result: \n{json_result}\n")
-            end_time = time.time()
-            time_first_execution = round((end_time - start_time) * 1000, 2)
-            print(f"Response time (first execution - Query 3): {time_first_execution} ms")
-            response_times_first_execution[f"{percentage} - Query 3"] = time_first_execution
+        db.close()
 
-            average_subsequent_time, average, margin_of_error = measure_query_performance(session, query3)
-            print(f"Average time of 30 subsequent executions (Query 3): {average_subsequent_time} ms")
-            print(f"Confidence Interval (Query 3): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-            average_response_times[f"{percentage} - Query 3"] = (average_subsequent_time, average, margin_of_error)
-        except Exception as e:
-            print(f"Error executing Query 3: {e}")
+    # Scrittura dei risultati nel file CSV cassandra_response_times_average_30.csv
+    response_times_file = os.path.join(output_directory, 'cassandra_response_times_average_30.csv')
+    with open(response_times_file, 'w', newline='') as csvfile:
+        fieldnames = ['Dataset', 'Query', 'Average of 30 Executions (ms)', 'Average Time (ms)', 'Confidence Interval (Min, Max)']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(all_response_times)
 
-        # Query 4
-        try:
-            start_time = time.time()
-            query_result = query4(session)
-            json_result = json.dumps([dict(row) for row in query_result], indent=4, default=safe_serialize)
-            print(f"Query 4 Result: \n{json_result}\n")
-            end_time = time.time()
-            time_first_execution = round((end_time - start_time) * 1000, 2)
-            print(f"Response time (first execution - Query 4): {time_first_execution} ms")
-            response_times_first_execution[f"{percentage} - Query 4"] = time_first_execution
-
-            average_subsequent_time, average, margin_of_error = measure_query_performance(session, query4)
-            print(f"Average time of 30 subsequent executions (Query 4): {average_subsequent_time} ms")
-            print(f"Confidence Interval (Query 4): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-            average_response_times[f"{percentage} - Query 4"] = (average_subsequent_time, average, margin_of_error)
-        except Exception as e:
-            print(f"Error executing Query 4: {e}")
-
-    # Salvataggio dei tempi di risposta della prima esecuzione in un file CSV
-    with open('Cassandra/Analysis/cassandra_times_of_response_first_execution.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Dataset', 'Query', 'Milliseconds'])
-        for key, value in response_times_first_execution.items():
-            dataset, query = key.split(' - ')
-            writer.writerow([dataset, query, value])
-
-    # Salvataggio dei tempi di risposta medi in un file CSV
-    with open('Cassandra/Analysis/cassandra_average_30_response_times.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Dataset', 'Query', 'Milliseconds', 'Average', 'Confidence Interval (Min, Max)'])
-        for key, value in average_response_times.items():
-            dataset, query = key.split(' - ')
-            average_subsequent_time, average, margin_of_error = value
-            writer.writerow([dataset, query, average_subsequent_time, average, f"({round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)})"])
+    # Scrittura dei risultati nel file CSV cassandra_times_of_response_first_execution.csv
+    first_execution_times_file = os.path.join(output_directory, 'cassandra_times_of_response_first_execution.csv')
+    with open(first_execution_times_file, 'w', newline='') as csvfile:
+        fieldnames = ['Dataset', 'Query', 'First Execution Time (ms)']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(first_execution_times)
 
 if __name__ == "__main__":
-    main()
+    process_datasets()

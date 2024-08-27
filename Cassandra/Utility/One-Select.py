@@ -15,7 +15,7 @@ def main():
     session = cluster.connect()
 
     keyspace_name = 'healthcare_25'  # Specifica il keyspace di interesse
-    table_name = 'patient_visits'  # Specifica la tabella di interesse
+    table_name = 'procedures'  # Specifica la tabella di interesse
 
     try:
         print(f"Fetching data from table '{table_name}' in keyspace '{keyspace_name}'...")

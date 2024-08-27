@@ -1,189 +1,142 @@
-from py2neo import Graph
+from neo4j import GraphDatabase
 import time
 import csv
-import scipy.stats as stats
 import numpy as np
-import json
+import os
 
-# Connessione ai diversi dataset Neo4j
-graph100 = Graph("bolt://localhost:7687", user="neo4j", password="12345678")
-graph75 = Graph("bolt://localhost:7687", user="neo4j", password="12345678")
-graph50 = Graph("bolt://localhost:7687", user="neo4j", password="12345678")
-graph25 = Graph("bolt://localhost:7687", user="neo4j", password="12345678")
+# Configurazione della connessione al database
+uri = "bolt://localhost:7687"
+user = "neo4j"
+password = "12345678"
+database_mappings = {
+    "25%": "dataset25",
+    "50%": "dataset50",
+    "75%": "dataset75",
+    "100%": "dataset100"
+}
 
-# Funzione per calcolare l'intervallo di confidenza
-def calculate_confidence_interval(data, confidence=0.95):
-    n = len(data)
-    average_value = np.mean(data)
-    stderr = stats.sem(data)
-    margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)
-    return average_value, margin_of_error
+# Creazione della classe per gestire la connessione e le query
+class Neo4jConnection:
+    def __init__(self, uri, user, password, database_name):
+        self._uri = uri
+        self._user = user
+        self._password = password
+        self._database_name = database_name
+        self._driver = GraphDatabase.driver(self._uri, auth=(self._user, self._password))
 
-# Funzione per misurare le performance di una query
-def measure_query_performance(graph, query_func, iterations=30):
-    subsequent_times = []
-    
-    for _ in range(iterations):
-        start_time = time.time()
-        query_func(graph)
-        end_time = time.time()
-        execution_time = (end_time - start_time) * 1000  # Tempo in millisecondi
-        subsequent_times.append(execution_time)
-    
-    average, margin_of_error = calculate_confidence_interval(subsequent_times)
-    average_subsequent_time = round(np.mean(subsequent_times), 2)
-    
-    return average_subsequent_time, average, margin_of_error
+    def close(self):
+        self._driver.close()
 
-# Definizione delle query
+    def execute_query(self, query, parameters=None):
+        with self._driver.session(database=self._database_name) as session:  # Specifica il database
+            result = session.run(query, parameters)
+            return [record for record in result]
 
-# Query 1: Recupera tutti i nodi Patient
-def query1(graph):
-    query = """
-    MATCH p=(Patient)-[r:VISIT_BY]->() RETURN p
-    """
-    result = graph.run(query).data()
-    return result
+# Funzione per eseguire la query e misurare il tempo di esecuzione
+def measure_query_time(db, query):
+    start_time = time.perf_counter()  # Uso di perf_counter per maggiore precisione
+    db.execute_query(query)
+    end_time = time.perf_counter()
+    return (end_time - start_time) * 1000  # Conversione in millisecondi
 
-# Query 2: Recupera i nodi Patient e le loro visite
-def query2(graph):
-    query = """
-    MATCH (p:Patient)-[:VISITED]->(v:Visit)
-    WHERE p.name >= 'N' AND p.name < 'Z'
-    RETURN p, collect(v) as visits
-    LIMIT 1000
-    """
-    result = graph.run(query).data()
-    return result
+# Funzione per eseguire la query su tutti i dataset e salvare i risultati nei CSV
+def process_datasets():
+    all_response_times = []  # Lista per memorizzare i risultati di tutte le query
+    first_execution_times = []  # Lista per memorizzare i tempi della prima esecuzione
 
-# Query 3: Recupera i nodi Patient, le loro visite e le procedure specifiche
-def query3(graph):
-    query = """
-    MATCH (p:Patient)-[:VISITED]->(v:Visit)-[:INCLUDES]->(proc:Procedure)
-    WHERE v.visit_date >= '2021-01-01' AND proc.name = 'Reactive 24/7 productivity'
-    RETURN p, collect(v) as visits
-    LIMIT 1000
-    """
-    result = graph.run(query).data()
-    return result
-
-# Query 4: Recupera i nodi Patient, le loro visite e le procedure con durata maggiore di 60 minuti
-def query4(graph):
-    query = """
-    MATCH (p:Patient)-[:VISITED]->(v:Visit)-[:INCLUDES]->(proc:Procedure)
-    WHERE v.visit_date >= '2021-01-01' AND proc.name = 'Reverse-engineered homogeneous standardization' AND v.duration > 60
-    RETURN p, collect(v) as visits
-    LIMIT 1000
-    """
-    result = graph.run(query).data()
-    return result
-
-def main():
-    # Definizione dei grafi da analizzare
-    graphs = {
-        '100%': graph100,
-        '75%': graph75,
-        '50%': graph50,
-        '25%': graph25
+    queries = {
+        'Query 1': """
+        MATCH (v:Visit)
+        RETURN v
+        """,
+        'Query 2': """ 
+        MATCH (v:Visit)-[:VISIT_TO]->(d:Doctor)
+        WHERE v.date >= '2021-01-01'
+        AND v.date <= '2023-12-31'
+        AND v.cost >= 500
+        RETURN d.id AS doctorId, v.date AS date, v.cost AS cost
+        """,
+        'Query 3': """
+        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)-[:INCLUDES_PROCEDURE]-(pr:Procedure)
+        WHERE pr.description STARTS WITH 'C' 
+        AND v.date >= '2021-01-01'
+        RETURN p, v, pr
+        """,
+        'Query 4': """
+        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)-[:INCLUDES_PROCEDURE]-(pr:Procedure)
+        MATCH (v)-[:VISIT_TO]-(d:Doctor)
+        WHERE pr.description STARTS WITH 'P'
+        AND v.date >= '2012-01-01'
+        AND d.name STARTS WITH "J"
+        AND v.duration >= 60
+        RETURN p, v, pr,d
+        """
     }
-    
-    response_times_first_execution = {}
-    average_response_times = {}
 
-    for percentage, graph in graphs.items():
-        print(f"\nAnalysis for percentage: {percentage}\n")
+    # Creazione della cartella ResponseTimes all'interno della directory corrente
+    output_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ResponseTimes')
+    os.makedirs(output_directory, exist_ok=True)
 
-        # Query 1
-        start_time = time.time()
-        query_result = query1(graph)
-        if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)
-            print(f"Query 1 Result: \n{json_result}\n")
-        else:
-            print(f"No patients found\n")
+    for percent, db_name in database_mappings.items():
+        db = Neo4jConnection(uri, user, password, db_name)
+        
+        for query_name, query in queries.items():
+            response_times = []
 
-        end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)
-        print(f"Response time (first execution - Query 1): {time_first_execution} ms")
-        response_times_first_execution[f"{percentage} - Query 1"] = time_first_execution
+            # Esecuzione della query 31 volte con un breve ritardo tra le esecuzioni
+            for i in range(31):
+                elapsed_time = measure_query_time(db, query)
+                if i == 0:
+                    # La prima esecuzione viene registrata separatamente
+                    first_execution_time = elapsed_time
+                else:
+                    # Le successive 30 esecuzioni sono registrate per il calcolo della media
+                    response_times.append(elapsed_time)
+                print(f"Dataset: {percent} - {query_name} execution {i+1}: {elapsed_time:.2f} ms")
+                time.sleep(0.001)  # Ritardo di 1 millisecondo tra le esecuzioni
 
-        average_subsequent_time, average, margin_of_error = measure_query_performance(graph, query1)
-        print(f"Average time of 30 subsequent executions (Query 1): {average_subsequent_time} ms")
-        print(f"Confidence Interval (Query 1): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-        average_response_times[f"{percentage} - Query 1"] = (average_subsequent_time, average, margin_of_error)
+            # Calcolo delle statistiche per le 30 esecuzioni successive
+            if response_times:
+                average_time_exact = np.mean(response_times)  # Media esatta
+                average_time_rounded = round(average_time_exact, 2)  # Media arrotondata
+                confidence_interval = (np.min(response_times), np.max(response_times))
+            else:
+                average_time_rounded = average_time_exact = confidence_interval = None
 
-        # Query 2
-        start_time = time.time()
-        query_result = query2(graph)
-        if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)
-            print(f"Query 2 Result: \n{json_result}\n")
-        else:
-            print(f"No patients found with visits\n")
+            # Aggiungi i risultati alla lista di tutti i risultati
+            all_response_times.append({
+                'Dataset': percent,
+                'Query': query_name,
+                'Average of 30 Executions (ms)': f"{average_time_rounded:.2f}" if average_time_rounded is not None else 'N/A',
+                'Average Time (ms)': f"{average_time_exact:.6f}" if average_time_exact is not None else 'N/A',
+                'Confidence Interval (Min, Max)': f"({confidence_interval[0]:.2f}, {confidence_interval[1]:.2f})" if confidence_interval is not None else 'N/A'
+            })
 
-        end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)
-        print(f"Response time (first execution - Query 2): {time_first_execution} ms")
-        response_times_first_execution[f"{percentage} - Query 2"] = time_first_execution
+            # Scrittura del tempo della prima esecuzione
+            first_execution_times.append({
+                'Dataset': percent,
+                'Query': query_name,
+                'First Execution Time (ms)': f"{first_execution_time:.2f}"
+            })
 
-        average_subsequent_time, average, margin_of_error = measure_query_performance(graph, query2)
-        print(f"Average time of 30 subsequent executions (Query 2): {average_subsequent_time} ms")
-        print(f"Confidence Interval (Query 2): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-        average_response_times[f"{percentage} - Query 2"] = (average_subsequent_time, average, margin_of_error)
+        # Chiusura della connessione
+        db.close()
 
-        # Query 3
-        start_time = time.time()
-        query_result = query3(graph)
-        if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)
-            print(f"Query 3 Result: \n{json_result}\n")
-        else:
-            print(f"No patients found with visits and specific procedures\n")
+    # Scrittura dei risultati nel file CSV neo4j_response_times_average_30.csv
+    response_times_file = os.path.join(output_directory, 'neo4j_response_times_average_30.csv')
+    with open(response_times_file, 'w', newline='') as csvfile:
+        fieldnames = ['Dataset', 'Query', 'Average of 30 Executions (ms)', 'Average Time (ms)', 'Confidence Interval (Min, Max)']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(all_response_times)
 
-        end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)
-        print(f"Response time (first execution - Query 3): {time_first_execution} ms")
-        response_times_first_execution[f"{percentage} - Query 3"] = time_first_execution
-
-        average_subsequent_time, average, margin_of_error = measure_query_performance(graph, query3)
-        print(f"Average time of 30 subsequent executions (Query 3): {average_subsequent_time} ms")
-        print(f"Confidence Interval (Query 3): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-        average_response_times[f"{percentage} - Query 3"] = (average_subsequent_time, average, margin_of_error)
-
-        # Query 4
-        start_time = time.time()
-        query_result = query4(graph)
-        if query_result:
-            json_result = json.dumps(query_result, indent=4, default=str)
-            print(f"Query 4 Result: \n{json_result}\n")
-        else:
-            print(f"No patients found with visits, specific procedures, and duration\n")
-
-        end_time = time.time()
-        time_first_execution = round((end_time - start_time) * 1000, 2)
-        print(f"Response time (first execution - Query 4): {time_first_execution} ms")
-        response_times_first_execution[f"{percentage} - Query 4"] = time_first_execution
-
-        average_subsequent_time, average, margin_of_error = measure_query_performance(graph, query4)
-        print(f"Average time of 30 subsequent executions (Query 4): {average_subsequent_time} ms")
-        print(f"Confidence Interval (Query 4): [{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}] ms\n")
-        average_response_times[f"{percentage} - Query 4"] = (average_subsequent_time, average, margin_of_error)
-
-    # Salvataggio dei tempi di risposta della prima esecuzione in un file CSV
-    with open('Neo4j/ResponseTimes/neo4j_times_of_response_first_execution.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Dataset", "Query", "Milliseconds"])
-        for key, value in response_times_first_execution.items():
-            percentage, query = key.split(' - ')
-            writer.writerow([percentage, query, value])
-
-    # Salvataggio dei tempi di risposta medi e intervalli di confidenza in un file CSV
-    with open('Neo4j/ResponseTimes/neo4j_response_times_average_30.csv', mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Dataset", "Query", "Milliseconds", "Average", "Confidence Interval (Min, Max)"])
-        for key, (average_time, average, margin_of_error) in average_response_times.items():
-            percentage, query = key.split(' - ')
-            writer.writerow([percentage, query, average_time, round(average, 2), f"[{round(average - margin_of_error, 2)}, {round(average + margin_of_error, 2)}]"])
+    # Scrittura dei risultati nel file CSV neo4j_times_of_response_first_execution.csv
+    first_execution_times_file = os.path.join(output_directory, 'neo4j_times_of_response_first_execution.csv')
+    with open(first_execution_times_file, 'w', newline='') as csvfile:
+        fieldnames = ['Dataset', 'Query', 'First Execution Time (ms)']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(first_execution_times)
 
 if __name__ == "__main__":
-    main()
+    process_datasets()

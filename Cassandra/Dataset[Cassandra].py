@@ -1,7 +1,6 @@
 import pandas as pd
 from cassandra.cluster import Cluster
 from uuid import uuid4
-from datetime import datetime
 import random
 
 def generate_uuid_map(dataframe, column_name):
@@ -56,9 +55,9 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
 
             if patient_id and doctor_id and procedure_id:
                 session.execute("""
-                    INSERT INTO visits (id, date, cost, patient_id, doctor_id, procedure_id) 
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (uuid4(), row['date'], row['cost'], patient_id, doctor_id, procedure_id))
+                    INSERT INTO visits (id, date, cost, patient_id, doctor_id, procedure_id, duration) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (uuid4(), row['date'], row['cost'], patient_id, doctor_id, procedure_id, row['duration']))
             else:
                 print(f"Visit record skipped due to missing references: {row}")
 
@@ -80,7 +79,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 session.execute("""
                     INSERT INTO patient_visits (patient_id, visit_id, name, email, visit_date, doctor_name, procedure_name, visit_duration)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (patient_id, uuid4(), patient['name'], patient['email'], row['date'], doctor['name'], procedure['description'], random.randint(30, 120)))
+                """, (patient_id, uuid4(), patient['name'], patient['email'], row['date'], doctor['name'], procedure['description'], row['duration']))
 
         print("Patient visits data inserted.")
     
@@ -131,7 +130,8 @@ def create_keyspace_and_tables(session, keyspace_name):
                 cost DECIMAL,
                 patient_id UUID,
                 doctor_id UUID,
-                procedure_id UUID
+                procedure_id UUID,
+                duration INT
             )
         """,
         'patient_visits': """

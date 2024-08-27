@@ -1,17 +1,17 @@
-Dataset,Query,Milliseconds
-100%,Query 1,333.76
-100%,Query 2,524.99
-100%,Query 3,272.62
-100%,Query 4,423.54
-75%,Query 1,4.32
-75%,Query 2,3.11
-75%,Query 3,5.02
-75%,Query 4,2.09
-50%,Query 1,5.02
-50%,Query 2,4.68
-50%,Query 3,2.62
-50%,Query 4,2.68
-25%,Query 1,2.01
-25%,Query 2,0.97
-25%,Query 3,2.01
-25%,Query 4,1.88
+Dataset,Query,First Execution Time (ms)
+25%,Query 1,2055.45
+25%,Query 2,4.43
+25%,Query 3,0.91
+25%,Query 4,1.43
+50%,Query 1,2063.87
+50%,Query 2,4.90
+50%,Query 3,2.51
+50%,Query 4,1.63
+75%,Query 1,2096.47
+75%,Query 2,7.06
+75%,Query 3,18.70
+75%,Query 4,2.90
+100%,Query 1,2114.92
+100%,Query 2,47.38
+100%,Query 3,48.64
+100%,Query 4,22.99
