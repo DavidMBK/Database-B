@@ -10,13 +10,13 @@ sns.set(style="whitegrid")
 
 # Define the file paths for Cassandra and Neo4j data
 cassandra_csv_path = [
-    "Cassandra/ResponseTimes/cassandra_times_of_response_first_execution.csv",
-    "Cassandra/ResponseTimes/cassandra_response_times_average_30.csv",
+    "Cassandra/ResponseTimes/cassandra_first_execution.csv",
+    "Cassandra/ResponseTimes/cassandra_30_avg_execution.csv",
 ]
 
 neo4j_csv_paths = [
-    "Neo4j/ResponseTimes/neo4j_times_of_response_first_execution.csv",
-    "Neo4j/ResponseTimes/neo4j_response_times_average_30.csv",
+    "Neo4j/ResponseTimes/neo4j_first_execution.csv",
+    "Neo4j/ResponseTimes/neo4j_30_avg_execution.csv",
 ]
 
 # Check if files exist
@@ -76,7 +76,7 @@ for query in queries:
     plt.tight_layout()
 
     # Save and show the plot
-    filename = f'Histograms/Histogram_Time_Before_Execution_{query}.png'
+    filename = f'Histograms/Histogram_First_ExecutionTime_{query}.png'
     plt.savefig(filename, dpi=300)
     plt.show()
     plt.close()
@@ -114,7 +114,7 @@ for query in queries:
     plt.tight_layout()
 
     # Save and show the plot
-    filename = f'Histograms/Histogram_Average_Execution_Time_{query}.png'
+    filename = f'Histograms/Histogram_30_Avg_ExecutionTime_{query}.png'
     plt.savefig(filename, dpi=300)
     plt.show()
     plt.close()
