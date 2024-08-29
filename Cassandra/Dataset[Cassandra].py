@@ -1,8 +1,6 @@
 import pandas as pd
 from cassandra.cluster import Cluster
 from uuid import uuid4
-from datetime import datetime
-import random
 
 def generate_uuid_map(dataframe, column_name):
     """Genera una mappa UUID per i valori unici in una colonna."""
@@ -12,82 +10,8 @@ def generate_uuid_map(dataframe, column_name):
         uuid_map[value] = uuid4()
     return uuid_map
 
-def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
-    session.set_keyspace(keyspace_name)
-    
-    try:
-        # Genera UUID per i dati esistenti
-        patient_id_map = generate_uuid_map(patients, 'id')
-        doctor_id_map = generate_uuid_map(doctors, 'id')
-        procedure_id_map = generate_uuid_map(procedures, 'id')
-
-        # Inserire i dati nella tabella dei pazienti
-        for _, row in patients.iterrows():
-            session.execute("""
-                INSERT INTO patients (id, name, birthdate, address, phone_number, email) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (patient_id_map[row['id']], row['name'], row['birthdate'], row['address'], row['phone_number'], row['email']))
-
-        print("Patients data inserted.")
-
-        # Inserire i dati nella tabella dei dottori
-        for _, row in doctors.iterrows():
-            session.execute("""
-                INSERT INTO doctors (id, name, specialization, address, phone_number, email) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (doctor_id_map[row['id']], row['name'], row['specialization'], row['address'], row['phone_number'], row['email']))
-
-        print("Doctors data inserted.")
-
-        # Inserire i dati nella tabella delle procedure
-        for _, row in procedures.iterrows():
-            session.execute("""
-                INSERT INTO procedures (id, description, code) 
-                VALUES (%s, %s, %s)
-            """, (procedure_id_map[row['id']], row['description'], row['code']))
-
-        print("Procedures data inserted.")
-
-        # Inserire i dati nella tabella delle visite
-        for _, row in visits.iterrows():
-            patient_id = patient_id_map.get(row['patient_id'])
-            doctor_id = doctor_id_map.get(row['doctor_id'])
-            procedure_id = procedure_id_map.get(row['procedure_id'])
-
-            if patient_id and doctor_id and procedure_id:
-                session.execute("""
-                    INSERT INTO visits (id, date, cost, patient_id, doctor_id, procedure_id) 
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (uuid4(), row['date'], row['cost'], patient_id, doctor_id, procedure_id))
-            else:
-                print(f"Visit record skipped due to missing references: {row}")
-
-        print("Visits data inserted.")
-
-        # Creare e popolare la tabella denormalizzata
-        for _, row in visits.iterrows():
-            patient_id = patient_id_map.get(row['patient_id'])
-            doctor_id = doctor_id_map.get(row['doctor_id'])
-            procedure_id = procedure_id_map.get(row['procedure_id'])
-
-            if patient_id and doctor_id and procedure_id:
-                # Recuperare i dettagli del paziente, del dottore e della procedura
-                patient = patients[patients['id'] == row['patient_id']].iloc[0]
-                doctor = doctors[doctors['id'] == row['doctor_id']].iloc[0]
-                procedure = procedures[procedures['id'] == row['procedure_id']].iloc[0]
-
-                # Inserire i dati nella tabella denormalizzata
-                session.execute("""
-                    INSERT INTO patient_visits (patient_id, visit_id, name, email, visit_date, doctor_name, procedure_name, visit_duration)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (patient_id, uuid4(), patient['name'], patient['email'], row['date'], doctor['name'], procedure['description'], random.randint(30, 120)))
-
-        print("Patient visits data inserted.")
-    
-    except Exception as e:
-        print(f"Error during data insertion: {e}")
-
 def create_keyspace_and_tables(session, keyspace_name):
+    """Crea il keyspace e tutte le tabelle necessarie se non esistono."""
     # Creare un keyspace se non esiste
     session.execute(f"""
         CREATE KEYSPACE IF NOT EXISTS {keyspace_name}
@@ -95,7 +19,7 @@ def create_keyspace_and_tables(session, keyspace_name):
     """)
     session.set_keyspace(keyspace_name)
 
-    # Creare tabelle se non esistono
+    # Definizione delle tabelle
     tables = {
         'patients': """
             CREATE TABLE IF NOT EXISTS patients (
@@ -127,32 +51,150 @@ def create_keyspace_and_tables(session, keyspace_name):
         'visits': """
             CREATE TABLE IF NOT EXISTS visits (
                 id UUID PRIMARY KEY,
-                date TEXT,
+                date DATE,
                 cost DECIMAL,
                 patient_id UUID,
                 doctor_id UUID,
-                procedure_id UUID
+                procedure_id UUID,
+                duration INT
             )
         """,
-        'patient_visits': """
-            CREATE TABLE IF NOT EXISTS patient_visits (
+        'patient_visit_counts': """
+            CREATE TABLE IF NOT EXISTS patient_visit_counts (
                 patient_id UUID,
-                visit_id UUID,
-                name TEXT,
-                email TEXT,
-                visit_date TIMESTAMP,
-                doctor_name TEXT,
-                procedure_name TEXT,
-                visit_duration INT,
-                PRIMARY KEY ((patient_id, visit_date), visit_id)
+                visit_date DATE,
+                visit_count COUNTER,
+                PRIMARY KEY ((patient_id), visit_date)
+            )
+        """,
+        'doctor_visits': """
+            CREATE TABLE IF NOT EXISTS doctor_visits (
+                doctor_id UUID,
+                specialization TEXT,
+                visit_date DATE,
+                visit_count COUNTER,
+                PRIMARY KEY ((doctor_id, specialization), visit_date)
+            )
+        """,
+        'procedure_visit_stats': """
+            CREATE TABLE IF NOT EXISTS procedure_visit_stats (
+                procedure_id UUID,
+                doctor_specialization TEXT,
+                visit_date DATE,
+                procedure_count COUNTER,
+                PRIMARY KEY ((procedure_id, doctor_specialization), visit_date)
+            )
+        """,
+        'doctor_patient_counts': """
+            CREATE TABLE IF NOT EXISTS doctor_patient_counts (
+                doctor_id UUID,
+                visit_date DATE,
+                total_patients COUNTER,
+                PRIMARY KEY ((doctor_id), visit_date)
             )
         """
     }
 
+    # Creare tutte le tabelle
     for table_name, create_table_query in tables.items():
         session.execute(create_table_query)
+        print(f"Table '{table_name}' created or already exists.")
+
+def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
+    """Inserisce i dati nelle tabelle e aggiorna i contatori."""
+    session.set_keyspace(keyspace_name)
+    
+    try:
+        # Genera UUID per i dati esistenti
+        patient_id_map = generate_uuid_map(patients, 'id')
+        doctor_id_map = generate_uuid_map(doctors, 'id')
+        procedure_id_map = generate_uuid_map(procedures, 'id')
+
+        # Inserire i dati nella tabella dei pazienti
+        for _, row in patients.iterrows():
+            session.execute("""
+                INSERT INTO patients (id, name, birthdate, address, phone_number, email) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (patient_id_map[row['id']], row['name'], row['birthdate'], row['address'], row['phone_number'], row['email']))
+        print("Patients data inserted.")
+
+        # Inserire i dati nella tabella dei dottori
+        for _, row in doctors.iterrows():
+            session.execute("""
+                INSERT INTO doctors (id, name, specialization, address, phone_number, email) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (doctor_id_map[row['id']], row['name'], row['specialization'], row['address'], row['phone_number'], row['email']))
+        print("Doctors data inserted.")
+
+        # Inserire i dati nella tabella delle procedure
+        for _, row in procedures.iterrows():
+            session.execute("""
+                INSERT INTO procedures (id, description, code) 
+                VALUES (%s, %s, %s)
+            """, (procedure_id_map[row['id']], row['description'], row['code']))
+        print("Procedures data inserted.")
+
+        # Inserire i dati nella tabella delle visite e aggiornare i contatori
+        for _, row in visits.iterrows():
+            patient_id = patient_id_map.get(row['patient_id'])
+            doctor_id = doctor_id_map.get(row['doctor_id'])
+            procedure_id = procedure_id_map.get(row['procedure_id'])
+
+            if patient_id and doctor_id and procedure_id:
+                # Inserimento nella tabella 'visits'
+                session.execute("""
+                    INSERT INTO visits (id, date, cost, patient_id, doctor_id, procedure_id, duration) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (uuid4(), row['date'], row['cost'], patient_id, doctor_id, procedure_id, row['duration']))
+                
+                # Aggiornamento dei contatori
+                visit_date = pd.to_datetime(row['date']).date()  # Convertire 'row['date']' in formato DATE
+                
+                # Recuperare la specializzazione del dottore
+                doctor_specialization = doctors.loc[doctors['id'] == row['doctor_id'], 'specialization'].values[0]
+
+                # Aggiornamento di patient_visit_counts
+                session.execute("""
+                    UPDATE patient_visit_counts 
+                    SET visit_count = visit_count + 1 
+                    WHERE patient_id = %s 
+                    AND visit_date = %s
+                """, (patient_id, visit_date))
+                
+                # Aggiornamento di doctor_visits
+                session.execute("""
+                    UPDATE doctor_visits 
+                    SET visit_count = visit_count + 1
+                    WHERE doctor_id = %s 
+                    AND specialization = %s
+                    AND visit_date = %s
+                """, (doctor_id, doctor_specialization, visit_date))
+                
+                # Aggiornamento di procedure_visit_stats
+                session.execute("""
+                    UPDATE procedure_visit_stats 
+                    SET procedure_count = procedure_count + 1
+                    WHERE procedure_id = %s 
+                    AND doctor_specialization = %s
+                    AND visit_date = %s
+                """, (procedure_id, doctor_specialization, visit_date))
+                
+                # Aggiornamento di doctor_patient_counts
+                session.execute("""
+                    UPDATE doctor_patient_counts 
+                    SET total_patients = total_patients + 1
+                    WHERE doctor_id = %s 
+                    AND visit_date = %s
+                """, (doctor_id, visit_date))
+            else:
+                print(f"Visit record skipped due to missing references: {row}")
+        print("Visits data inserted and counters updated.")
+
+    except Exception as e:
+        print(f"Error during data insertion: {e}")
 
 def main():
+    """Funzione principale per connettersi al cluster, creare keyspace e tabelle, e inserire i dati."""
     # Connessione al cluster Cassandra
     cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)
     session = cluster.connect()
@@ -163,7 +205,7 @@ def main():
         
         for pct in percentages:
             keyspace_name = f"healthcare_{int(pct*100)}"
-            print(f"Processing {keyspace_name}...")
+            print(f"Processing keyspace '{keyspace_name}'...")
 
             # Creare e impostare il keyspace e le tabelle
             create_keyspace_and_tables(session, keyspace_name)
@@ -183,7 +225,7 @@ def main():
             # Inserire i dati nei keyspace corrispondenti
             insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
 
-            print(f"{keyspace_name} created and populated successfully.")
+            print(f"Keyspace '{keyspace_name}' created and populated successfully.\n")
 
     except Exception as e:
         print(f"Error: {e}")

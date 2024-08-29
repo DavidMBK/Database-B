@@ -1,4 +1,6 @@
 from cassandra.cluster import Cluster
+from cassandra.query import SimpleStatement
+from cassandra import ConsistencyLevel
 
 def describe_keyspace(session, keyspace_name):
     try:
@@ -35,22 +37,24 @@ def drop_tables(session, keyspace_name):
     for table in tables:
         try:
             query = f"DROP TABLE IF EXISTS {keyspace_name}.{table}"
-            session.execute(query)
+            statement = SimpleStatement(query, consistency_level=ConsistencyLevel.ONE, fetch_size=10)  # Adjust fetch_size if necessary
+            session.execute(statement, timeout=600)  # Set timeout in seconds
             print(f"Table '{table}' has been dropped.")
         except Exception as e:
-            print(f"Error dropping table '{table}': {e}")
+            print(f"Error dropping table '{table}': {e}. Query: {query}")
 
 def drop_keyspace(session, keyspace_name):
     try:
         query = f"DROP KEYSPACE IF EXISTS {keyspace_name}"
-        session.execute(query)
+        statement = SimpleStatement(query, consistency_level=ConsistencyLevel.ONE)
+        session.execute(statement, timeout=600)  # Set timeout in seconds
         print(f"Keyspace '{keyspace_name}' has been dropped.")
     except Exception as e:
         print(f"Error dropping keyspace '{keyspace_name}': {e}")
 
 def main():
     # Connessione al cluster Cassandra
-    cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)
+    cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)  # Removed request_timeout
     session = cluster.connect()
 
     try:

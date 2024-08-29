@@ -1,17 +1,17 @@
-# Importa le librerie necessarie
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
 import numpy as np
 import seaborn as sns
+import os
 
-# Imposta lo stile di Seaborn per i grafici
+# Set the style of seaborn for the plots
 sns.set(style="whitegrid")
 
-# Definisce i percorsi ai file CSV per i dati di Cassandra e Neo4j
+# Define the file paths for Cassandra and Neo4j data
 cassandra_csv_path = [
-    "Cassandra/Analysis/cassandra_times_of_response_first_execution.csv",
-    "Cassandra/Analysis/cassandra_average_30_response_times.csv",
+    "Cassandra/ResponseTimes/cassandra_times_of_response_first_execution.csv",
+    "Cassandra/ResponseTimes/cassandra_response_times_average_30.csv",
 ]
 
 neo4j_csv_paths = [
@@ -19,47 +19,50 @@ neo4j_csv_paths = [
     "Neo4j/ResponseTimes/neo4j_response_times_average_30.csv",
 ]
 
-# Carica i dati dai file CSV per Cassandra
-data_cassandra_first_execution = pd.read_csv(cassandra_csv_path[0], sep=',', dtype={'Confidence Interval (Min, Max)': str})
-data_cassandra_avg_30 = pd.read_csv(cassandra_csv_path[1], sep=',', dtype={'Confidence Interval (Min, Max)': str})
+# Check if files exist
+for path in cassandra_csv_path + neo4j_csv_paths:
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"The file {path} does not exist.")
 
-# Carica i dati dai file CSV per Neo4j
-data_neo4j_first_execution = pd.read_csv(neo4j_csv_paths[0], sep=',', dtype={'Confidence Interval (Min, Max)': str})
-data_neo4j_avg_30 = pd.read_csv(neo4j_csv_paths[1], sep=',', dtype={'Confidence Interval (Min, Max)': str})
+# Load data from CSV files
+data_cassandra_first_execution = pd.read_csv(cassandra_csv_path[0], sep=',')
+data_cassandra_avg_30 = pd.read_csv(cassandra_csv_path[1], sep=',')
+data_neo4j_first_execution = pd.read_csv(neo4j_csv_paths[0], sep=',')
+data_neo4j_avg_30 = pd.read_csv(neo4j_csv_paths[1], sep=',')
 
-# Definisce le dimensioni del dataset e le query da analizzare
+# Define dataset sizes and queries to analyze
 dataset_sizes = ['100%', '75%', '50%', '25%']
 queries = ['Query 1', 'Query 2', 'Query 3', 'Query 4']
 
-# Definisce i colori per i grafici
-color_cassandra = '#2b93db'  # Blu vivace
-color_neo4j = '#4bce4b'     # Lime brillante
+# Define colors for the plots
+color_cassandra = '#2b93db'  # Vivid blue
+color_neo4j = '#4bce4b'     # Bright lime
 
-# Funzione per estrarre i valori di intervallo di confidenza dai dati
+# Function to extract confidence interval values
 def extract_confidence_values(confidence_interval_str):
     if pd.isna(confidence_interval_str):
         return np.nan, np.nan
     matches = re.findall(r'\d+\.\d+', confidence_interval_str)
     return float(matches[0]), float(matches[1])
 
-# Cicla attraverso ogni query per generare i grafici
+# Iterate through each query to generate plots
 for query in queries:
-    # Filtra i dati per la query corrente
+    # Filter data for the current query
     data_cassandra_query_first_execution = data_cassandra_first_execution[data_cassandra_first_execution['Query'] == query]
     data_cassandra_query_avg_30 = data_cassandra_avg_30[data_cassandra_avg_30['Query'] == query]
     data_neo4j_query_first_execution = data_neo4j_first_execution[data_neo4j_first_execution['Query'] == query]
     data_neo4j_query_avg_30 = data_neo4j_avg_30[data_neo4j_avg_30['Query'] == query]
 
-    # Crea il primo grafico: Tempo di esecuzione per la prima esecuzione
+    # Create the first plot: First Execution Time
     plt.figure(figsize=(12, 7))
     bar_width = 0.35
     index = np.arange(len(dataset_sizes))
 
-    # Estrai i valori di tempo di esecuzione per Cassandra e Neo4j
-    values_cassandra_first_execution = [data_cassandra_query_first_execution[data_cassandra_query_first_execution['Dataset'] == size]['Milliseconds'].values[0] for size in dataset_sizes]
-    values_neo4j_first_execution = [data_neo4j_query_first_execution[data_neo4j_query_first_execution['Dataset'] == size]['Milliseconds'].values[0] for size in dataset_sizes]
+    # Extract execution times for Cassandra and Neo4j
+    values_cassandra_first_execution = [data_cassandra_query_first_execution[data_cassandra_query_first_execution['Dataset'] == size]['First Execution Time (ms)'].values[0] for size in dataset_sizes]
+    values_neo4j_first_execution = [data_neo4j_query_first_execution[data_neo4j_query_first_execution['Dataset'] == size]['First Execution Time (ms)'].values[0] for size in dataset_sizes]
 
-    # Crea i barplot per Cassandra e Neo4j
+    # Create bar plots for Cassandra and Neo4j
     plt.bar(index - bar_width/2, values_cassandra_first_execution, bar_width, label='Cassandra', color=color_cassandra)
     plt.bar(index + bar_width/2, values_neo4j_first_execution, bar_width, label='Neo4j', color=color_neo4j)
 
@@ -72,32 +75,32 @@ for query in queries:
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     plt.tight_layout()
 
-    # Salva e mostra il grafico
+    # Save and show the plot
     filename = f'Histograms/Histogram_Time_Before_Execution_{query}.png'
     plt.savefig(filename, dpi=300)
     plt.show()
     plt.close()
 
-    # Crea il secondo grafico: Tempo di esecuzione medio con intervallo di confidenza
+    # Create the second plot: Average Execution Time with Confidence Interval
     plt.figure(figsize=(12, 7))
-    values_cassandra_avg_30 = [data_cassandra_query_avg_30[data_cassandra_query_avg_30['Dataset'] == size]['Average'].values[0] for size in dataset_sizes]
-    values_neo4j_avg_30 = [data_neo4j_query_avg_30[data_neo4j_query_avg_30['Dataset'] == size]['Average'].values[0] for size in dataset_sizes]
+    values_cassandra_avg_30 = [data_cassandra_query_avg_30[data_cassandra_query_avg_30['Dataset'] == size]['Average of 30 Executions (ms)'].values[0] for size in dataset_sizes]
+    values_neo4j_avg_30 = [data_neo4j_query_avg_30[data_neo4j_query_avg_30['Dataset'] == size]['Average of 30 Executions (ms)'].values[0] for size in dataset_sizes]
 
-    # Estrai gli intervalli di confidenza per Cassandra e Neo4j
+    # Extract confidence intervals for Cassandra and Neo4j
     conf_intervals_cassandra = [extract_confidence_values(data_cassandra_query_avg_30[data_cassandra_query_avg_30['Dataset'] == size]['Confidence Interval (Min, Max)'].values[0]) for size in dataset_sizes]
     conf_intervals_neo4j = [extract_confidence_values(data_neo4j_query_avg_30[data_neo4j_query_avg_30['Dataset'] == size]['Confidence Interval (Min, Max)'].values[0]) for size in dataset_sizes]
 
-    # Estrai i valori minimi e massimi degli intervalli di confidenza
+    # Extract minimum and maximum values of confidence intervals
     conf_cassandra_min = [conf[0] for conf in conf_intervals_cassandra]
     conf_cassandra_max = [conf[1] for conf in conf_intervals_cassandra]
     conf_neo4j_min = [conf[0] for conf in conf_intervals_neo4j]
     conf_neo4j_max = [conf[1] for conf in conf_intervals_neo4j]
 
-    # Calcola gli errori per le barre di errore
+    # Calculate error bars
     cassandra_yerr = [np.array([values_cassandra_avg_30[i] - conf_cassandra_min[i], conf_cassandra_max[i] - values_cassandra_avg_30[i]]) for i in range(len(dataset_sizes))]
     neo4j_yerr = [np.array([values_neo4j_avg_30[i] - conf_neo4j_min[i], conf_neo4j_max[i] - values_neo4j_avg_30[i]]) for i in range(len(dataset_sizes))]
 
-    # Crea i barplot con barre di errore per Cassandra e Neo4j
+    # Create bar plots with error bars for Cassandra and Neo4j
     plt.bar(index - bar_width/2, values_cassandra_avg_30, bar_width, yerr=np.array(cassandra_yerr).T, capsize=5, label='Cassandra', color=color_cassandra)
     plt.bar(index + bar_width/2, values_neo4j_avg_30, bar_width, yerr=np.array(neo4j_yerr).T, capsize=5, label='Neo4j', color=color_neo4j)
 
@@ -110,7 +113,7 @@ for query in queries:
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     plt.tight_layout()
 
-    # Salva e mostra il grafico
+    # Save and show the plot
     filename = f'Histograms/Histogram_Average_Execution_Time_{query}.png'
     plt.savefig(filename, dpi=300)
     plt.show()

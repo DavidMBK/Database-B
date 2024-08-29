@@ -1,0 +1,17 @@
+Dataset,Query,First Execution Time (ms)
+25%,Query 1,156.97
+25%,Query 2,26.71
+25%,Query 3,31.28
+25%,Query 4,29.05
+50%,Query 1,73.68
+50%,Query 2,24.46
+50%,Query 3,52.02
+50%,Query 4,26.83
+75%,Query 1,164.37
+75%,Query 2,119.77
+75%,Query 3,90.75
+75%,Query 4,109.86
+100%,Query 1,132.03
+100%,Query 2,286.18
+100%,Query 3,71.68
+100%,Query 4,297.04
