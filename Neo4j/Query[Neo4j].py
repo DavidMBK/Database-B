@@ -121,7 +121,7 @@ def process_datasets():
         db.close()
 
     # Scrittura dei risultati nel file CSV neo4j_response_times_average_30.csv
-    response_times_file = os.path.join(output_directory, 'neo4j_response_times_average_30.csv')
+    response_times_file = os.path.join(output_directory, 'neo4j_first_execution.csv')
     with open(response_times_file, 'w', newline='') as csvfile:
         fieldnames = ['Dataset', 'Query', 'Average of 30 Executions (ms)', 'Average Time (ms)', 'Confidence Interval (Min, Max)']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -129,7 +129,7 @@ def process_datasets():
         writer.writerows(all_response_times)
 
     # Scrittura dei risultati nel file CSV neo4j_times_of_response_first_execution.csv
-    first_execution_times_file = os.path.join(output_directory, 'neo4j_times_of_response_first_execution.csv')
+    first_execution_times_file = os.path.join(output_directory, 'neo4j_30_avg_execution.csv')
     with open(first_execution_times_file, 'w', newline='') as csvfile:
         fieldnames = ['Dataset', 'Query', 'First Execution Time (ms)']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
