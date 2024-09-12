@@ -37,8 +37,10 @@ def measure_query_time(session, query):
 # Funzione per calcolare l'intervallo di confidenza
 def calculate_confidence_interval(data, confidence=0.95):
     n = len(data)
+    if n <= 1:
+        return np.nan, np.nan  # Non possiamo calcolare l'intervallo con meno di 2 campioni
     average_value = np.mean(data)
-    stderr = stats.sem(data)
+    stderr = stats.sem(data)  # Standard Error of the Mean
     margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)
     return average_value, margin_of_error
 
@@ -92,7 +94,7 @@ def process_datasets():
         db = CassandraConnection(contact_points, keyspace)
         
         for query_name, query in queries.items():
-            response_times = []
+            response_times = []  # Lista per memorizzare i tempi di esecuzione della query
 
             # Esecuzione della query 31 volte con un breve ritardo tra le esecuzioni
             for i in range(31):
@@ -113,7 +115,7 @@ def process_datasets():
                 average, margin_of_error = calculate_confidence_interval(response_times)
                 confidence_interval = (average - margin_of_error, average + margin_of_error)
             else:
-                average_time_rounded = average = margin_of_error = confidence_interval = None
+                average_time_rounded = average = margin_of_error = confidence_interval = (np.nan, np.nan)
 
             # Aggiungi i risultati alla lista di tutti i risultati
             all_response_times.append({

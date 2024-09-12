@@ -100,6 +100,24 @@ def create_keyspace_and_tables(session, keyspace_name):
         session.execute(create_table_query)
         print(f"Table '{table_name}' created or already exists.")
 
+def sample_connected_data(visits, patients, doctors, procedures, percentage):
+    """Seleziona un sottoinsieme dei dati assicurandosi che tutte le connessioni siano mantenute."""
+    
+    # Prendere un sottoinsieme delle visite
+    visits_subset = visits.sample(frac=percentage, random_state=1)
+    
+    # Estrarre gli ID collegati
+    patient_ids = visits_subset['patient_id'].unique()
+    doctor_ids = visits_subset['doctor_id'].unique()
+    procedure_ids = visits_subset['procedure_id'].unique()
+    
+    # Filtrare i pazienti, dottori e procedure in base agli ID trovati nelle visite
+    patients_subset = patients[patients['id'].isin(patient_ids)]
+    doctors_subset = doctors[doctors['id'].isin(doctor_ids)]
+    procedures_subset = procedures[procedures['id'].isin(procedure_ids)]
+    
+    return patients_subset, doctors_subset, procedures_subset, visits_subset
+
 def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
     """Inserisce i dati nelle tabelle e aggiorna i contatori."""
     session.set_keyspace(keyspace_name)
@@ -109,7 +127,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         patient_id_map = generate_uuid_map(patients, 'id')
         doctor_id_map = generate_uuid_map(doctors, 'id')
         procedure_id_map = generate_uuid_map(procedures, 'id')
-
+        
         # Inserire i dati nella tabella dei pazienti
         for _, row in patients.iterrows():
             session.execute("""
@@ -117,7 +135,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (patient_id_map[row['id']], row['name'], row['birthdate'], row['address'], row['phone_number'], row['email']))
         print("Patients data inserted.")
-
+        
         # Inserire i dati nella tabella dei dottori
         for _, row in doctors.iterrows():
             session.execute("""
@@ -125,7 +143,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (doctor_id_map[row['id']], row['name'], row['specialization'], row['address'], row['phone_number'], row['email']))
         print("Doctors data inserted.")
-
+        
         # Inserire i dati nella tabella delle procedure
         for _, row in procedures.iterrows():
             session.execute("""
@@ -133,13 +151,13 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 VALUES (%s, %s, %s)
             """, (procedure_id_map[row['id']], row['description'], row['code']))
         print("Procedures data inserted.")
-
+        
         # Inserire i dati nella tabella delle visite e aggiornare i contatori
         for _, row in visits.iterrows():
             patient_id = patient_id_map.get(row['patient_id'])
             doctor_id = doctor_id_map.get(row['doctor_id'])
             procedure_id = procedure_id_map.get(row['procedure_id'])
-
+            
             if patient_id and doctor_id and procedure_id:
                 # Inserimento nella tabella 'visits'
                 session.execute("""
@@ -152,7 +170,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 
                 # Recuperare la specializzazione del dottore
                 doctor_specialization = doctors.loc[doctors['id'] == row['doctor_id'], 'specialization'].values[0]
-
+                
                 # Aggiornamento di patient_visit_counts
                 session.execute("""
                     UPDATE patient_visit_counts 
@@ -189,7 +207,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
             else:
                 print(f"Visit record skipped due to missing references: {row}")
         print("Visits data inserted and counters updated.")
-
+        
     except Exception as e:
         print(f"Error during data insertion: {e}")
 
@@ -198,38 +216,41 @@ def main():
     # Connessione al cluster Cassandra
     cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)
     session = cluster.connect()
-
+    
     try:
         # Percentuali dei dati
         percentages = [1.0, 0.75, 0.50, 0.25]
         
+        # Carica i dataset dai file CSV
+        patients = pd.read_csv('./Dataset/patients.csv', encoding='ISO-8859-1')
+        doctors = pd.read_csv('./Dataset/doctors.csv', encoding='ISO-8859-1')
+        procedures = pd.read_csv('./Dataset/procedures.csv', encoding='ISO-8859-1')
+        visits = pd.read_csv('./Dataset/visits.csv', encoding='ISO-8859-1')
+        
+        # Inizialmente usa il 100% dei dati
+        patients_subset = patients
+        doctors_subset = doctors
+        procedures_subset = procedures
+        visits_subset = visits
+        
         for pct in percentages:
             keyspace_name = f"healthcare_{int(pct*100)}"
             print(f"Processing keyspace '{keyspace_name}'...")
-
+            
             # Creare e impostare il keyspace e le tabelle
             create_keyspace_and_tables(session, keyspace_name)
-    
-            # Carica i dataset dai file CSV
-            patients = pd.read_csv('./Dataset/patients.csv', encoding='ISO-8859-1')
-            doctors = pd.read_csv('./Dataset/doctors.csv', encoding='ISO-8859-1')
-            procedures = pd.read_csv('./Dataset/procedures.csv', encoding='ISO-8859-1')
-            visits = pd.read_csv('./Dataset/visits.csv', encoding='ISO-8859-1')
-
+            
             # Creare subset dei dati
-            patients_subset = patients.sample(frac=pct, random_state=1)
-            doctors_subset = doctors.sample(frac=pct, random_state=1)
-            procedures_subset = procedures.sample(frac=pct, random_state=1)
-            visits_subset = visits.sample(frac=pct, random_state=1)
-
+            patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(visits, patients, doctors, procedures, pct)
+            
             # Inserire i dati nei keyspace corrispondenti
             insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
-
+            
             print(f"Keyspace '{keyspace_name}' created and populated successfully.\n")
-
+    
     except Exception as e:
         print(f"Error: {e}")
-
+    
     finally:
         cluster.shutdown()
 
