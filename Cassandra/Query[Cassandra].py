@@ -37,8 +37,10 @@ def measure_query_time(session, query):
 # Funzione per calcolare l'intervallo di confidenza
 def calculate_confidence_interval(data, confidence=0.95):
     n = len(data)
+    if n <= 1:
+        return np.nan, np.nan  # Non possiamo calcolare l'intervallo con meno di 2 campioni
     average_value = np.mean(data)
-    stderr = stats.sem(data)
+    stderr = stats.sem(data)  # Standard Error of the Mean
     margin_of_error = stderr * stats.t.ppf((1 + confidence) / 2, n - 1)
     return average_value, margin_of_error
 
@@ -50,21 +52,25 @@ def process_datasets():
     # Livello di complessità Non Onerosità
     queries = {
         'Query 1': """
-            SELECT patient_id, SUM(visit_count) AS total_visits 
-            FROM patient_visit_counts 
-            WHERE visit_date >= '2021-01-01' 
-            AND visit_date <= '2023-12-31' 
-            GROUP BY patient_id
-            ALLOW FILTERING;
-        """,
+            SELECT *
+            FROM patients
+            WHERE birthdate >= '1940-06-21'
+            ALLOW FILTERING; 
+            """,
+            #AND visit_date <= '2023-12-31' 
+            #GROUP BY patient_id
+            #ALLOW FILTERING;
+       
         'Query 2': """
             SELECT doctor_id, specialization, SUM(visit_count) AS total_visits 
             FROM doctor_visits 
             WHERE visit_date >= '2021-01-01'
-            AND visit_date <= '2023-12-31'
-            GROUP BY doctor_id, specialization
             ALLOW FILTERING;
-        """,
+             """,
+            #AND visit_date <= '2023-12-31'
+            #GROUP BY doctor_id, specialization
+            #ALLOW FILTERING;
+       
         'Query 3': """
             SELECT procedure_id, doctor_specialization, 
             SUM(procedure_count) AS total_procedures 
@@ -92,7 +98,7 @@ def process_datasets():
         db = CassandraConnection(contact_points, keyspace)
         
         for query_name, query in queries.items():
-            response_times = []
+            response_times = []  # Lista per memorizzare i tempi di esecuzione della query
 
             # Esecuzione della query 31 volte con un breve ritardo tra le esecuzioni
             for i in range(31):
@@ -113,7 +119,7 @@ def process_datasets():
                 average, margin_of_error = calculate_confidence_interval(response_times)
                 confidence_interval = (average - margin_of_error, average + margin_of_error)
             else:
-                average_time_rounded = average = margin_of_error = confidence_interval = None
+                average_time_rounded = average = margin_of_error = confidence_interval = (np.nan, np.nan)
 
             # Aggiungi i risultati alla lista di tutti i risultati
             all_response_times.append({
