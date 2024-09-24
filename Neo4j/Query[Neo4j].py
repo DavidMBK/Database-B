@@ -47,14 +47,13 @@ def process_datasets():
 
     queries = {
         'Query 1': """
-        MATCH (p:Patient)-[:VISIT_BY]-(v:Visit)
-        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
-        WITH p, COUNT(v) AS total_visits
-        RETURN p.id AS patient_id, total_visits
+        MATCH (p:Patient)
+        WHERE p.birthdate >= '1940-06-21'
+        RETURN p
         """,
         'Query 2': """ 
         MATCH (d:Doctor)-[:VISIT_TO]-(v:Visit)
-        WHERE v.date >= '2021-01-01' AND v.date <= '2023-12-31'
+        WHERE v.date >= '2021-01-01'
         WITH d, d.specialization AS specialization, COUNT(v) AS total_visits
         RETURN d.id AS doctor_id, specialization, total_visits
         """,

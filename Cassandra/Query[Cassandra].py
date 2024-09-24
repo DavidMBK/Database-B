@@ -52,21 +52,25 @@ def process_datasets():
     # Livello di complessità Non Onerosità
     queries = {
         'Query 1': """
-            SELECT patient_id, SUM(visit_count) AS total_visits 
-            FROM patient_visit_counts 
-            WHERE visit_date >= '2021-01-01' 
-            AND visit_date <= '2023-12-31' 
-            GROUP BY patient_id
-            ALLOW FILTERING;
-        """,
+            SELECT *
+            FROM patients
+            WHERE birthdate >= '1940-06-21'
+            ALLOW FILTERING; 
+            """,
+            #AND visit_date <= '2023-12-31' 
+            #GROUP BY patient_id
+            #ALLOW FILTERING;
+       
         'Query 2': """
             SELECT doctor_id, specialization, SUM(visit_count) AS total_visits 
             FROM doctor_visits 
             WHERE visit_date >= '2021-01-01'
-            AND visit_date <= '2023-12-31'
-            GROUP BY doctor_id, specialization
             ALLOW FILTERING;
-        """,
+             """,
+            #AND visit_date <= '2023-12-31'
+            #GROUP BY doctor_id, specialization
+            #ALLOW FILTERING;
+       
         'Query 3': """
             SELECT procedure_id, doctor_specialization, 
             SUM(procedure_count) AS total_procedures 
