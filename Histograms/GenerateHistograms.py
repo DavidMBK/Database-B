@@ -16,7 +16,7 @@ cassandra_csv_path = [
 
 neo4j_csv_paths = [
     "Neo4j/ResponseTimes/neo4j_first_execution.csv",
-    "Neo4j/ResponseTimes/neo4j_30_avg_execution.csv",
+    "Neo4j/ResponseTimes/neo4j_50_avg_execution.csv",  # Modificato a 50 esecuzioni
 ]
 
 # Check if files exist
@@ -28,7 +28,7 @@ for path in cassandra_csv_path + neo4j_csv_paths:
 data_cassandra_first_execution = pd.read_csv(cassandra_csv_path[0], sep=',')
 data_cassandra_avg_30 = pd.read_csv(cassandra_csv_path[1], sep=',')
 data_neo4j_first_execution = pd.read_csv(neo4j_csv_paths[0], sep=',')
-data_neo4j_avg_30 = pd.read_csv(neo4j_csv_paths[1], sep=',')
+data_neo4j_avg_50 = pd.read_csv(neo4j_csv_paths[1], sep=',')  # Modificato a 50 esecuzioni
 
 # Define dataset sizes and queries to analyze
 dataset_sizes = ['100%', '75%', '50%', '25%']
@@ -51,7 +51,7 @@ for query in queries:
     data_cassandra_query_first_execution = data_cassandra_first_execution[data_cassandra_first_execution['Query'] == query]
     data_cassandra_query_avg_30 = data_cassandra_avg_30[data_cassandra_avg_30['Query'] == query]
     data_neo4j_query_first_execution = data_neo4j_first_execution[data_neo4j_first_execution['Query'] == query]
-    data_neo4j_query_avg_30 = data_neo4j_avg_30[data_neo4j_avg_30['Query'] == query]
+    data_neo4j_query_avg_50 = data_neo4j_avg_50[data_neo4j_avg_50['Query'] == query]  # Modificato a 50 esecuzioni
 
     # Create the first plot: First Execution Time
     plt.figure(figsize=(12, 7))
@@ -84,11 +84,11 @@ for query in queries:
     # Create the second plot: Average Execution Time with Confidence Interval
     plt.figure(figsize=(12, 7))
     values_cassandra_avg_30 = [data_cassandra_query_avg_30[data_cassandra_query_avg_30['Dataset'] == size]['Average of 30 Executions (ms)'].values[0] for size in dataset_sizes]
-    values_neo4j_avg_30 = [data_neo4j_query_avg_30[data_neo4j_query_avg_30['Dataset'] == size]['Average of 30 Executions (ms)'].values[0] for size in dataset_sizes]
+    values_neo4j_avg_50 = [data_neo4j_query_avg_50[data_neo4j_query_avg_50['Dataset'] == size]['Average of 50 Executions (ms)'].values[0] for size in dataset_sizes]  # Modificato a 50 esecuzioni
 
     # Extract confidence intervals for Cassandra and Neo4j
     conf_intervals_cassandra = [extract_confidence_values(data_cassandra_query_avg_30[data_cassandra_query_avg_30['Dataset'] == size]['Confidence Interval (Min, Max)'].values[0]) for size in dataset_sizes]
-    conf_intervals_neo4j = [extract_confidence_values(data_neo4j_query_avg_30[data_neo4j_query_avg_30['Dataset'] == size]['Confidence Interval (Min, Max)'].values[0]) for size in dataset_sizes]
+    conf_intervals_neo4j = [extract_confidence_values(data_neo4j_query_avg_50[data_neo4j_query_avg_50['Dataset'] == size]['Confidence Interval (Min, Max)'].values[0]) for size in dataset_sizes]  # Modificato a 50 esecuzioni
 
     # Extract minimum and maximum values of confidence intervals
     conf_cassandra_min = [conf[0] for conf in conf_intervals_cassandra]
@@ -98,11 +98,11 @@ for query in queries:
 
     # Calculate error bars
     cassandra_yerr = [np.array([values_cassandra_avg_30[i] - conf_cassandra_min[i], conf_cassandra_max[i] - values_cassandra_avg_30[i]]) for i in range(len(dataset_sizes))]
-    neo4j_yerr = [np.array([values_neo4j_avg_30[i] - conf_neo4j_min[i], conf_neo4j_max[i] - values_neo4j_avg_30[i]]) for i in range(len(dataset_sizes))]
+    neo4j_yerr = [np.array([values_neo4j_avg_50[i] - conf_neo4j_min[i], conf_neo4j_max[i] - values_neo4j_avg_50[i]]) for i in range(len(dataset_sizes))]  # Modificato a 50 esecuzioni
 
     # Create bar plots with error bars for Cassandra and Neo4j
     plt.bar(index - bar_width/2, values_cassandra_avg_30, bar_width, yerr=np.array(cassandra_yerr).T, capsize=5, label='Cassandra', color=color_cassandra)
-    plt.bar(index + bar_width/2, values_neo4j_avg_30, bar_width, yerr=np.array(neo4j_yerr).T, capsize=5, label='Neo4j', color=color_neo4j)
+    plt.bar(index + bar_width/2, values_neo4j_avg_50, bar_width, yerr=np.array(neo4j_yerr).T, capsize=5, label='Neo4j', color=color_neo4j)
 
     plt.xlabel('Dataset Size', fontsize=14)
     plt.ylabel('Average Execution Time (ms)', fontsize=14)
@@ -114,7 +114,7 @@ for query in queries:
     plt.tight_layout()
 
     # Save and show the plot
-    filename = f'Histograms/Histogram_30_Avg_ExecutionTime_{query}.png'
+    filename = f'Histograms/Histogram_50_Avg_ExecutionTime_{query}.png'  # Modificato a 50 esecuzioni
     plt.savefig(filename, dpi=300)
     plt.show()
     plt.close()

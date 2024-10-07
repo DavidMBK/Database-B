@@ -8,10 +8,10 @@ import scipy.stats as stats
 # Configurazione della connessione al cluster Cassandra
 contact_points = ['127.0.0.1']  # Cambia con il tuo indirizzo del nodo Cassandra
 keyspace_mappings = {
-    "25%": "healthcare_25",
-    "50%": "healthcare_50",
+    "100%": "healthcare_100",
     "75%": "healthcare_75",
-    "100%": "healthcare_100"
+    "50%": "healthcare_50",
+    "25%": "healthcare_25"
 }
 
 # Creazione della classe per gestire la connessione e le query
