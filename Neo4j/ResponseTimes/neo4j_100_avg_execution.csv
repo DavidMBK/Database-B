@@ -1,4 +1,4 @@
-Dataset,Query,Average of 50 Executions (ms),Average Time (ms),"Confidence Interval (Min, Max)"
+Dataset,Query,Average of 100 Executions (ms),Average Time (ms),"Confidence Interval (Min, Max)"
 100%,Query 1,16.77,16.765810,"(15.79, 17.74)"
 100%,Query 2,10.00,10.000741,"(9.41, 10.60)"
 100%,Query 3,9.81,9.810103,"(9.49, 10.13)"

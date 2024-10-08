@@ -100,18 +100,18 @@ def create_keyspace_and_tables(session, keyspace_name):
         session.execute(create_table_query)
         print(f"Table '{table_name}' created or already exists.")
 
-def sample_connected_data(visits, patients, doctors, procedures, percentage):
-    """Seleziona un sottoinsieme dei dati assicurandosi che tutte le connessioni siano mantenute."""
+def sample_connected_data(visits, patients, doctors, procedures, percentage, random_state=1):
+    """Seleziona un sottoinsieme dei dati mantenendo la coerenza delle relazioni tra pazienti, dottori e procedure."""
     
-    # Prendere un sottoinsieme delle visite
-    visits_subset = visits.sample(frac=percentage, random_state=1)
+    # Prendere un sottoinsieme delle visite utilizzando un seed fisso per garantire coerenza tra le selezioni
+    visits_subset = visits.sample(frac=percentage, random_state=random_state)
     
-    # Estrarre gli ID collegati
+    # Estrarre gli ID collegati dai sottoinsiemi di visite
     patient_ids = visits_subset['patient_id'].unique()
     doctor_ids = visits_subset['doctor_id'].unique()
     procedure_ids = visits_subset['procedure_id'].unique()
     
-    # Filtrare i pazienti, dottori e procedure in base agli ID trovati nelle visite
+    # Filtrare pazienti, dottori e procedure in base agli ID trovati nelle visite selezionate
     patients_subset = patients[patients['id'].isin(patient_ids)]
     doctors_subset = doctors[doctors['id'].isin(doctor_ids)]
     procedures_subset = procedures[procedures['id'].isin(procedure_ids)]
@@ -240,8 +240,10 @@ def main():
             # Creare e impostare il keyspace e le tabelle
             create_keyspace_and_tables(session, keyspace_name)
             
-            # Creare subset dei dati
-            patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(visits, patients, doctors, procedures, pct)
+            # Creare subset dei dati mantenendo la coerenza
+            patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(
+                visits, patients, doctors, procedures, pct, random_state=1  # Usa random_state per consistenza
+            )
             
             # Inserire i dati nei keyspace corrispondenti
             insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
