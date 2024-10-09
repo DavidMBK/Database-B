@@ -1,6 +1,51 @@
 id,description,code
-1,Pap Smear,PR0001
+1,Lipid Panel,PR0001
 2,Prostate-Specific Antigen (PSA) Test,PR0002
-3,Colonoscopy,PR0003
-4,Preoperative Assessment,PR0004
-5,Bone Density Test,PR0005
+3,Eye Exam,PR0003
+4,Nutritional Counseling,PR0004
+5,Colonoscopy,PR0005
+6,Laparoscopy,PR0006
+7,HIV Test,PR0007
+8,Basic Metabolic Panel,PR0008
+9,Travel Vaccination,PR0009
+10,Diabetes Screening,PR0010
+11,Endoscopy,PR0011
+12,Hearing Test,PR0012
+13,Mammogram,PR0013
+14,Physical Therapy,PR0014
+15,Stress Test,PR0015
+16,Preoperative Assessment,PR0016
+17,Pulmonary Function Test,PR0017
+18,Preoperative Assessment,PR0018
+19,Nutritional Counseling,PR0019
+20,Allergy Testing,PR0020
+21,Eye Exam,PR0021
+22,Eye Exam,PR0022
+23,Eye Exam,PR0023
+24,Allergy Testing,PR0024
+25,Endoscopy,PR0025
+26,Hearing Test,PR0026
+27,Hepatitis B Test,PR0027
+28,Kidney Function Test,PR0028
+29,Hearing Test,PR0029
+30,Genetic Testing,PR0030
+31,Vaccination,PR0031
+32,Complete Blood Count (CBC),PR0032
+33,Pap Smear,PR0033
+34,Chest X-Ray,PR0034
+35,CT Scan of the Abdomen,PR0035
+36,Drug Screening,PR0036
+37,Hearing Test,PR0037
+38,Physical Therapy,PR0038
+39,Vaccination,PR0039
+40,Bone Density Test,PR0040
+41,Psychiatric Evaluation,PR0041
+42,Prostate-Specific Antigen (PSA) Test,PR0042
+43,Postoperative Follow-Up,PR0043
+44,Wound Care,PR0044
+45,Colonoscopy,PR0045
+46,Prostate-Specific Antigen (PSA) Test,PR0046
+47,HIV Test,PR0047
+48,Kidney Function Test,PR0048
+49,Lipid Panel,PR0049
+50,Prostate-Specific Antigen (PSA) Test,PR0050
