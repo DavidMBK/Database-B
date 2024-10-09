@@ -102,7 +102,7 @@ def process_datasets():
                     # Le successive 100 esecuzioni sono registrate per il calcolo della media
                     response_times.append(elapsed_time)
                 print(f"Dataset: {percent} - {query_name} execution {i+1}: {elapsed_time:.2f} ms")
-                time.sleep(0.01)  # Ritardo di 1 millisecondo tra le esecuzioni
+                time.sleep(0.001)  # Ritardo di 1 millisecondo tra le esecuzioni
 
             # Calcolo delle statistiche per le 100 esecuzioni successive
             if response_times:
