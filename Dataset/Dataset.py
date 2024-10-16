@@ -7,10 +7,10 @@ import os
 fake = Faker()
 
 # Definisci il numero di record da generare per ciascun tipo di entità
-NUM_PATIENTS = 75000
-NUM_DOCTORS = 7000
-NUM_PROCEDURES = 5000
-NUM_VISITS = 200000
+NUM_PATIENTS = 200000
+NUM_DOCTORS = 8000
+NUM_PROCEDURES = 2000
+NUM_VISITS = 800000
 
 # Crea la directory 'Dataset' se non esiste
 if not os.path.exists('Dataset'):

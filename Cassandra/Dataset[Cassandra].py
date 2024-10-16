@@ -1,6 +1,8 @@
 import pandas as pd
 from cassandra.cluster import Cluster
 from uuid import uuid4
+from tqdm import tqdm
+import time
 
 def generate_uuid_map(dataframe, column_name):
     """Genera una mappa UUID per i valori unici in una colonna."""
@@ -100,24 +102,6 @@ def create_keyspace_and_tables(session, keyspace_name):
         session.execute(create_table_query)
         print(f"Table '{table_name}' created or already exists.")
 
-def sample_connected_data(visits, patients, doctors, procedures, percentage, random_state=1):
-    """Seleziona un sottoinsieme dei dati mantenendo la coerenza delle relazioni tra pazienti, dottori e procedure."""
-    
-    # Prendere un sottoinsieme delle visite utilizzando un seed fisso per garantire coerenza tra le selezioni
-    visits_subset = visits.sample(frac=percentage, random_state=random_state)
-    
-    # Estrarre gli ID collegati dai sottoinsiemi di visite
-    patient_ids = visits_subset['patient_id'].unique()
-    doctor_ids = visits_subset['doctor_id'].unique()
-    procedure_ids = visits_subset['procedure_id'].unique()
-    
-    # Filtrare pazienti, dottori e procedure in base agli ID trovati nelle visite selezionate
-    patients_subset = patients[patients['id'].isin(patient_ids)]
-    doctors_subset = doctors[doctors['id'].isin(doctor_ids)]
-    procedures_subset = procedures[procedures['id'].isin(procedure_ids)]
-    
-    return patients_subset, doctors_subset, procedures_subset, visits_subset
-
 def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
     """Inserisce i dati nelle tabelle e aggiorna i contatori."""
     session.set_keyspace(keyspace_name)
@@ -129,7 +113,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         procedure_id_map = generate_uuid_map(procedures, 'id')
         
         # Inserire i dati nella tabella dei pazienti
-        for _, row in patients.iterrows():
+        for _, row in tqdm(patients.iterrows(), total=len(patients), desc="Inserimento pazienti"):
             session.execute("""
                 INSERT INTO patients (id, name, birthdate, address, phone_number, email) 
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -137,7 +121,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         print("Patients data inserted.")
         
         # Inserire i dati nella tabella dei dottori
-        for _, row in doctors.iterrows():
+        for _, row in tqdm(doctors.iterrows(), total=len(doctors), desc="Inserimento dottori"):
             session.execute("""
                 INSERT INTO doctors (id, name, specialization, address, phone_number, email) 
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -145,7 +129,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         print("Doctors data inserted.")
         
         # Inserire i dati nella tabella delle procedure
-        for _, row in procedures.iterrows():
+        for _, row in tqdm(procedures.iterrows(), total=len(procedures), desc="Inserimento procedure"):
             session.execute("""
                 INSERT INTO procedures (id, description, code) 
                 VALUES (%s, %s, %s)
@@ -153,7 +137,7 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         print("Procedures data inserted.")
         
         # Inserire i dati nella tabella delle visite e aggiornare i contatori
-        for _, row in visits.iterrows():
+        for _, row in tqdm(visits.iterrows(), total=len(visits), desc="Inserimento visite"):
             patient_id = patient_id_map.get(row['patient_id'])
             doctor_id = doctor_id_map.get(row['doctor_id'])
             procedure_id = procedure_id_map.get(row['procedure_id'])
@@ -210,6 +194,37 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
         
     except Exception as e:
         print(f"Error during data insertion: {e}")
+
+def sample_connected_data(visits, patients, doctors, procedures, percentage, random_state=1):
+    """Seleziona un sottoinsieme dei dati mantenendo la coerenza delle relazioni tra pazienti, dottori e procedure."""
+    
+    # Prendere un sottoinsieme delle visite utilizzando un seed fisso per garantire coerenza tra le selezioni
+    visits_subset = visits.sample(frac=percentage, random_state=random_state)
+    
+    # Estrarre gli ID collegati dai sottoinsiemi di visite
+    patient_ids = visits_subset['patient_id'].unique()
+    doctor_ids = visits_subset['doctor_id'].unique()
+    procedure_ids = visits_subset['procedure_id'].unique()
+    
+    # Filtrare pazienti, dottori e procedure in base agli ID trovati nelle visite selezionate
+    patients_subset = patients[patients['id'].isin(patient_ids)].copy()
+    doctors_subset = doctors[doctors['id'].isin(doctor_ids)].copy()
+    procedures_subset = procedures[procedures['id'].isin(procedure_ids)].copy()
+    
+    # Verifica che tutti gli ID delle visite siano ancora validi nei sottoinsiemi filtrati
+    valid_patient_ids = set(patients_subset['id'])
+    valid_doctor_ids = set(doctors_subset['id'])
+    valid_procedure_ids = set(procedures_subset['id'])
+    
+    # Filtra le visite per mantenere solo quelle con riferimenti validi
+    visits_subset = visits_subset[
+        (visits_subset['patient_id'].isin(valid_patient_ids)) &
+        (visits_subset['doctor_id'].isin(valid_doctor_ids)) &
+        (visits_subset['procedure_id'].isin(valid_procedure_ids))
+    ].copy()
+    
+    return patients_subset, doctors_subset, procedures_subset, visits_subset
+
 
 def main():
     """Funzione principale per connettersi al cluster, creare keyspace e tabelle, e inserire i dati."""
