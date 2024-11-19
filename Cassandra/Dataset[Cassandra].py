@@ -151,8 +151,6 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
                 
                 # Aggiornamento dei contatori
                 visit_date = pd.to_datetime(row['date']).date()  # Convertire 'row['date']' in formato DATE
-                
-                # Recuperare la specializzazione del dottore
                 doctor_specialization = doctors.loc[doctors['id'] == row['doctor_id'], 'specialization'].values[0]
                 
                 # Aggiornamento di patient_visit_counts
@@ -227,49 +225,50 @@ def sample_connected_data(visits, patients, doctors, procedures, percentage, ran
 
 
 def main():
-    """Funzione principale per connettersi al cluster, creare keyspace e tabelle, e inserire i dati."""
-    # Connessione al cluster Cassandra
-    cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)
+    """Funzione principale per connettersi al cluster, creare keyspace e inserire dati."""
+    # Connetti al cluster Cassandra
+    cluster = Cluster(['127.0.0.1'])
     session = cluster.connect()
     
-    try:
-        # Percentuali dei dati
-        percentages = [1.0, 0.75, 0.50, 0.25]
-        
-        # Carica i dataset dai file CSV
-        patients = pd.read_csv('./Dataset/patients.csv', encoding='ISO-8859-1')
-        doctors = pd.read_csv('./Dataset/doctors.csv', encoding='ISO-8859-1')
-        procedures = pd.read_csv('./Dataset/procedures.csv', encoding='ISO-8859-1')
-        visits = pd.read_csv('./Dataset/visits.csv', encoding='ISO-8859-1')
-        
-        # Inizialmente usa il 100% dei dati
-        patients_subset = patients
-        doctors_subset = doctors
-        procedures_subset = procedures
-        visits_subset = visits
-        
-        for pct in percentages:
-            keyspace_name = f"healthcare_{int(pct*100)}"
-            print(f"Processing keyspace '{keyspace_name}'...")
-            
-            # Creare e impostare il keyspace e le tabelle
-            create_keyspace_and_tables(session, keyspace_name)
-            
-            # Creare subset dei dati mantenendo la coerenza
-            patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(
-                visits, patients, doctors, procedures, pct, random_state=1  # Usa random_state per consistenza
-            )
-            
-            # Inserire i dati nei keyspace corrispondenti
-            insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
-            
-            print(f"Keyspace '{keyspace_name}' created and populated successfully.\n")
+    # Percentuali gerarchiche dei dati
+    percentages = [1.0, 0.75, 0.50, 0.25]
     
-    except Exception as e:
-        print(f"Error: {e}")
+    # Carica i dataset dai file CSV
+    patients = pd.read_csv('./Dataset/patients.csv', encoding='ISO-8859-1')
+    doctors = pd.read_csv('./Dataset/doctors.csv', encoding='ISO-8859-1')
+    procedures = pd.read_csv('./Dataset/procedures.csv', encoding='ISO-8859-1')
+    visits = pd.read_csv('./Dataset/visits.csv', encoding='ISO-8859-1')
     
-    finally:
-        cluster.shutdown()
+    # Usa il 100% dei dati per il primo passo
+    patients_subset = patients
+    doctors_subset = doctors
+    procedures_subset = procedures
+    visits_subset = visits
+    i = 0
+    for pct in percentages:
+        keyspace_name = f"healthcare_{int(pct*100)}"
+        print(f"Processing keyspace '{keyspace_name}'...")
+        
+        # Creare e impostare il keyspace e le tabelle
+        create_keyspace_and_tables(session, keyspace_name)
+        
+        # Campiona i dati a partire dai sottoinsiemi precedenti
+        patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(
+            visits_subset,  # Usa l'ultimo sottoinsieme calcolato
+            patients_subset,
+            doctors_subset,
+            procedures_subset,
+            pct,  # Percentuale rispetto al sottoinsieme attuale
+            random_state=1+i
+        )
+        
+        i=+1
+        # Inserire i dati nei keyspace corrispondenti
+        insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
+        
+        print(f"Keyspace '{keyspace_name}' created and populated successfully.\n")
+    
+    cluster.shutdown()
 
 if __name__ == "__main__":
     main()

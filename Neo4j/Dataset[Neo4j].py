@@ -27,7 +27,7 @@ def create_graph(graph, patients, doctors, procedures, visits, dataset_name):
         graph.create(procedure_node)
         procedure_nodes[row['id']] = procedure_node
 
-    # Crea nodi per le visite/claim e relazioni con altri nodi
+    # Crea nodi per le visite e relazioni
     for _, row in tqdm(visits.iterrows(), total=len(visits), desc=f"Loading Visits and Relationships into {dataset_name}"):
         visit_node = Node("Visit", id=row['id'], date=row['date'], cost=row['cost'], duration=row['duration'])
         graph.create(visit_node)
@@ -61,11 +61,29 @@ graph75 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name
 graph50 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name="dataset50")
 graph25 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name="dataset25")
 
-# Crea i grafi per i diversi dataset
+# Crea il dataset completo (100%)
 create_graph(graph100, patients, doctors, procedures, visits, "dataset100")
-create_graph(graph75, patients.sample(frac=0.75), doctors.sample(frac=0.75), procedures.sample(frac=0.75), visits.sample(frac=0.75), "dataset75")
-create_graph(graph50, patients.sample(frac=0.50), doctors.sample(frac=0.50), procedures.sample(frac=0.50), visits.sample(frac=0.50), "dataset50")
-create_graph(graph25, patients.sample(frac=0.25), doctors.sample(frac=0.25), procedures.sample(frac=0.25), visits.sample(frac=0.25), "dataset25")
+
+# Crea dataset75 con il 75% dei dati del dataset100
+patients_75 = patients.sample(frac=0.75, random_state=1)
+doctors_75 = doctors.sample(frac=0.75, random_state=1)
+procedures_75 = procedures.sample(frac=0.75, random_state=1)
+visits_75 = visits[visits['patient_id'].isin(patients_75['id']) & visits['doctor_id'].isin(doctors_75['id']) & visits['procedure_id'].isin(procedures_75['id'])]
+create_graph(graph75, patients_75, doctors_75, procedures_75, visits_75, "dataset75")
+
+# Crea dataset50 con il 50% dei dati del dataset75
+patients_50 = patients_75.sample(frac=0.50, random_state=2)
+doctors_50 = doctors_75.sample(frac=0.50, random_state=2)
+procedures_50 = procedures_75.sample(frac=0.50, random_state=2)
+visits_50 = visits_75[visits_75['patient_id'].isin(patients_50['id']) & visits_75['doctor_id'].isin(doctors_50['id']) & visits_75['procedure_id'].isin(procedures_50['id'])]
+create_graph(graph50, patients_50, doctors_50, procedures_50, visits_50, "dataset50")
+
+# Crea dataset25 con il 25% dei dati del dataset50
+patients_25 = patients_50.sample(frac=0.25, random_state=3)
+doctors_25 = doctors_50.sample(frac=0.25, random_state=3)
+procedures_25 = procedures_50.sample(frac=0.25, random_state=3)
+visits_25 = visits_50[visits_50['patient_id'].isin(patients_25['id']) & visits_50['doctor_id'].isin(doctors_25['id']) & visits_50['procedure_id'].isin(procedures_25['id'])]
+create_graph(graph25, patients_25, doctors_25, procedures_25, visits_25, "dataset25")
 
 # Stampa un messaggio di conferma
 print("Data successfully loaded into all Neo4j databases.")
