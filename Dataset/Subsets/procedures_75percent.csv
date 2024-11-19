@@ -1,16 +1,3 @@
 id,description,code
-12,Electrocardiogram (ECG),PR0012
-10,Stress Test,PR0010
-16,Abdominal Ultrasound,PR0016
-5,Electrocardiogram (ECG),PR0005
-11,Electrocardiogram (ECG),PR0011
-20,Stress Test,PR0020
-4,Chest X-Ray,PR0004
-3,CT Scan of the Abdomen,PR0003
-8,Electrocardiogram (ECG),PR0008
-19,Stress Test,PR0019
-9,Complete Blood Count (CBC),PR0009
-13,Thyroid Function Test,PR0013
-15,Complete Blood Count (CBC),PR0015
-1,Electrocardiogram (ECG),PR0001
-6,Kidney Function Test,PR0006
+2,Complete Blood Count (CBC),PR0002
+1,Thyroid Function Test,PR0001

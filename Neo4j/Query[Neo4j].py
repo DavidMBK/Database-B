@@ -54,10 +54,12 @@ class Neo4jConnection:
         except Exception as e:
             logging.error(f"Errore durante la pulizia della cache: {e}")
 
-def measure_query_time(db, query, warmup=True):
-    if warmup:
+def measure_query_time(db, query, warmup=0):
+    # Warm-up più lungo
+    for _ in range(warmup):
         db.execute_query(query)
 
+    # Misura il tempo effettivo
     start_time = time.perf_counter()
     db.execute_query(query)
     end_time = time.perf_counter()
@@ -101,18 +103,27 @@ def process_datasets():
         """
     }
 
-    output_directory = os.path.join(os.getcwd(), 'ResponseTimes')
+    # Ottieni la directory in cui si trova il file Python
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+
+    # Crea la cartella 'ResponseTimes' all'interno della stessa directory
+    output_directory = os.path.join(current_directory, 'ResponseTimes')
     os.makedirs(output_directory, exist_ok=True)
 
-    for percent, db_name in database_mappings.items(): 
+    for percent, db_name in database_mappings.items():
         db = Neo4jConnection(uri, user, password, db_name)
-        db.clear_cache()  # Svuota cache interna prima dell'uso
+        
+        # Svuota la cache una sola volta prima di cominciare con le query
+        db.clear_cache()
 
         for query_name, query in queries.items():
             response_times = []
 
+            # Warm-up più lungo: esegui la query 10 volte
+            measure_query_time(db, query, warmup=10)
+
             for i in range(101):
-                elapsed_time = measure_query_time(db, query, warmup=(i == 0))
+                elapsed_time = measure_query_time(db, query, warmup=0)
                 response_times.append(elapsed_time)
 
                 if i == 0:
@@ -148,6 +159,7 @@ def process_datasets():
 
         db.close()
 
+    # Salvataggio dei dati nei file CSV
     response_times_file = os.path.join(output_directory, 'neo4j_100_avg_execution.csv')
     with open(response_times_file, 'w', newline='') as csvfile:
         fieldnames = ['Dataset', 'Query', 'Average of 100 Executions (ms)', 'Average Time (ms)', 'Confidence Interval (Min, Max)']

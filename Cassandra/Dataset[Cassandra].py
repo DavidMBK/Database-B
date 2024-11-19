@@ -2,7 +2,7 @@ import pandas as pd
 from cassandra.cluster import Cluster
 from uuid import uuid4
 from tqdm import tqdm
-import time
+import os
 
 def generate_uuid_map(dataframe, column_name):
     """Genera una mappa UUID per i valori unici in una colonna."""
@@ -193,36 +193,23 @@ def insert_data(session, keyspace_name, patients, doctors, procedures, visits):
     except Exception as e:
         print(f"Error during data insertion: {e}")
 
-def sample_connected_data(visits, patients, doctors, procedures, percentage, random_state=1):
-    """Seleziona un sottoinsieme dei dati mantenendo la coerenza delle relazioni tra pazienti, dottori e procedure."""
+def load_subdataset(base_path, percentage):
+    """
+    Carica i dataset per la percentuale specificata dalla cartella subdataset.
+    """
+    percent_str = f"{int(percentage * 100)}"
+    patients_file = os.path.join(base_path, f"patients_{percent_str}.csv")
+    doctors_file = os.path.join(base_path, f"doctors_{percent_str}.csv")
+    procedures_file = os.path.join(base_path, f"procedures_{percent_str}.csv")
+    visits_file = os.path.join(base_path, f"visits_{percent_str}.csv")
     
-    # Prendere un sottoinsieme delle visite utilizzando un seed fisso per garantire coerenza tra le selezioni
-    visits_subset = visits.sample(frac=percentage, random_state=random_state)
+    # Carica i file CSV
+    patients = pd.read_csv(patients_file, encoding='ISO-8859-1')
+    doctors = pd.read_csv(doctors_file, encoding='ISO-8859-1')
+    procedures = pd.read_csv(procedures_file, encoding='ISO-8859-1')
+    visits = pd.read_csv(visits_file, encoding='ISO-8859-1')
     
-    # Estrarre gli ID collegati dai sottoinsiemi di visite
-    patient_ids = visits_subset['patient_id'].unique()
-    doctor_ids = visits_subset['doctor_id'].unique()
-    procedure_ids = visits_subset['procedure_id'].unique()
-    
-    # Filtrare pazienti, dottori e procedure in base agli ID trovati nelle visite selezionate
-    patients_subset = patients[patients['id'].isin(patient_ids)].copy()
-    doctors_subset = doctors[doctors['id'].isin(doctor_ids)].copy()
-    procedures_subset = procedures[procedures['id'].isin(procedure_ids)].copy()
-    
-    # Verifica che tutti gli ID delle visite siano ancora validi nei sottoinsiemi filtrati
-    valid_patient_ids = set(patients_subset['id'])
-    valid_doctor_ids = set(doctors_subset['id'])
-    valid_procedure_ids = set(procedures_subset['id'])
-    
-    # Filtra le visite per mantenere solo quelle con riferimenti validi
-    visits_subset = visits_subset[
-        (visits_subset['patient_id'].isin(valid_patient_ids)) &
-        (visits_subset['doctor_id'].isin(valid_doctor_ids)) &
-        (visits_subset['procedure_id'].isin(valid_procedure_ids))
-    ].copy()
-    
-    return patients_subset, doctors_subset, procedures_subset, visits_subset
-
+    return patients, doctors, procedures, visits
 
 def main():
     """Funzione principale per connettersi al cluster, creare keyspace e inserire dati."""
@@ -232,19 +219,8 @@ def main():
     
     # Percentuali gerarchiche dei dati
     percentages = [1.0, 0.75, 0.50, 0.25]
+    base_path = './Dataset/subdataset'  # Path principale dei subdataset
     
-    # Carica i dataset dai file CSV
-    patients = pd.read_csv('./Dataset/patients.csv', encoding='ISO-8859-1')
-    doctors = pd.read_csv('./Dataset/doctors.csv', encoding='ISO-8859-1')
-    procedures = pd.read_csv('./Dataset/procedures.csv', encoding='ISO-8859-1')
-    visits = pd.read_csv('./Dataset/visits.csv', encoding='ISO-8859-1')
-    
-    # Usa il 100% dei dati per il primo passo
-    patients_subset = patients
-    doctors_subset = doctors
-    procedures_subset = procedures
-    visits_subset = visits
-    i = 0
     for pct in percentages:
         keyspace_name = f"healthcare_{int(pct*100)}"
         print(f"Processing keyspace '{keyspace_name}'...")
@@ -252,19 +228,11 @@ def main():
         # Creare e impostare il keyspace e le tabelle
         create_keyspace_and_tables(session, keyspace_name)
         
-        # Campiona i dati a partire dai sottoinsiemi precedenti
-        patients_subset, doctors_subset, procedures_subset, visits_subset = sample_connected_data(
-            visits_subset,  # Usa l'ultimo sottoinsieme calcolato
-            patients_subset,
-            doctors_subset,
-            procedures_subset,
-            pct,  # Percentuale rispetto al sottoinsieme attuale
-            random_state=1+i
-        )
+        # Caricare i dataset specifici per la percentuale corrente
+        patients, doctors, procedures, visits = load_subdataset(base_path, pct)
         
-        i=+1
         # Inserire i dati nei keyspace corrispondenti
-        insert_data(session, keyspace_name, patients_subset, doctors_subset, procedures_subset, visits_subset)
+        insert_data(session, keyspace_name, patients, doctors, procedures, visits)
         
         print(f"Keyspace '{keyspace_name}' created and populated successfully.\n")
     

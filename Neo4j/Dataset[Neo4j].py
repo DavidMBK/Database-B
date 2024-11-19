@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from py2neo import Graph, Node, Relationship
 from tqdm import tqdm
@@ -49,11 +50,12 @@ def create_graph(graph, patients, doctors, procedures, visits, dataset_name):
 
     print(f"Finished loading data into {dataset_name}.")
 
-# Carica i dataset dai file CSV
-patients = pd.read_csv('Dataset/patients.csv', encoding='ISO-8859-1')
-doctors = pd.read_csv('Dataset/doctors.csv', encoding='ISO-8859-1')
-procedures = pd.read_csv('Dataset/procedures.csv', encoding='ISO-8859-1')
-visits = pd.read_csv('Dataset/visits.csv', encoding='ISO-8859-1')
+# Funzione per caricare i dati dal file CSV
+def load_data_from_csv(dataset_path):
+    return pd.read_csv(dataset_path, encoding='ISO-8859-1')
+
+# Percorso della cartella Subsets
+SUBSET_DIR = 'Dataset/Subsets'
 
 # Connessione ai diversi database Neo4j
 graph100 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name="dataset100")
@@ -61,29 +63,28 @@ graph75 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name
 graph50 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name="dataset50")
 graph25 = Graph("bolt://localhost:7687", user="neo4j", password="12345678", name="dataset25")
 
-# Crea il dataset completo (100%)
-create_graph(graph100, patients, doctors, procedures, visits, "dataset100")
+# Funzione per caricare i dati per ciascun sottoinsieme e categoria
+def load_and_create_graph_for_subset(subset_percentage, graph):
+    # Definisci i nomi dei file CSV basati sulla percentuale
+    patients_file = f'{SUBSET_DIR}/patients_{subset_percentage}percent.csv'
+    doctors_file = f'{SUBSET_DIR}/doctors_{subset_percentage}percent.csv'
+    procedures_file = f'{SUBSET_DIR}/procedures_{subset_percentage}percent.csv'
+    visits_file = f'{SUBSET_DIR}/visits_{subset_percentage}percent.csv'
 
-# Crea dataset75 con il 75% dei dati del dataset100
-patients_75 = patients.sample(frac=0.75, random_state=1)
-doctors_75 = doctors.sample(frac=0.75, random_state=1)
-procedures_75 = procedures.sample(frac=0.75, random_state=1)
-visits_75 = visits[visits['patient_id'].isin(patients_75['id']) & visits['doctor_id'].isin(doctors_75['id']) & visits['procedure_id'].isin(procedures_75['id'])]
-create_graph(graph75, patients_75, doctors_75, procedures_75, visits_75, "dataset75")
+    # Carica i dati dai file CSV
+    patients = load_data_from_csv(patients_file)
+    doctors = load_data_from_csv(doctors_file)
+    procedures = load_data_from_csv(procedures_file)
+    visits = load_data_from_csv(visits_file)
 
-# Crea dataset50 con il 50% dei dati del dataset75
-patients_50 = patients_75.sample(frac=0.50, random_state=2)
-doctors_50 = doctors_75.sample(frac=0.50, random_state=2)
-procedures_50 = procedures_75.sample(frac=0.50, random_state=2)
-visits_50 = visits_75[visits_75['patient_id'].isin(patients_50['id']) & visits_75['doctor_id'].isin(doctors_50['id']) & visits_75['procedure_id'].isin(procedures_50['id'])]
-create_graph(graph50, patients_50, doctors_50, procedures_50, visits_50, "dataset50")
+    # Crea i nodi e le relazioni nel grafo
+    create_graph(graph, patients, doctors, procedures, visits, f"dataset{subset_percentage}")
 
-# Crea dataset25 con il 25% dei dati del dataset50
-patients_25 = patients_50.sample(frac=0.25, random_state=3)
-doctors_25 = doctors_50.sample(frac=0.25, random_state=3)
-procedures_25 = procedures_50.sample(frac=0.25, random_state=3)
-visits_25 = visits_50[visits_50['patient_id'].isin(patients_25['id']) & visits_50['doctor_id'].isin(doctors_25['id']) & visits_50['procedure_id'].isin(procedures_25['id'])]
-create_graph(graph25, patients_25, doctors_25, procedures_25, visits_25, "dataset25")
+# Carica i dati e crea i grafi per i vari sottoinsiemi
+load_and_create_graph_for_subset(100, graph100)
+load_and_create_graph_for_subset(75, graph75)
+load_and_create_graph_for_subset(50, graph50)
+load_and_create_graph_for_subset(25, graph25)
 
 # Stampa un messaggio di conferma
 print("Data successfully loaded into all Neo4j databases.")

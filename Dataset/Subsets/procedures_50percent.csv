@@ -1,9 +1,2 @@
 id,description,code
-8,Electrocardiogram (ECG),PR0008
-15,Complete Blood Count (CBC),PR0015
-3,CT Scan of the Abdomen,PR0003
-4,Chest X-Ray,PR0004
-19,Stress Test,PR0019
-13,Thyroid Function Test,PR0013
-11,Electrocardiogram (ECG),PR0011
-10,Stress Test,PR0010
+2,Complete Blood Count (CBC),PR0002
