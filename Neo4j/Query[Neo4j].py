@@ -4,6 +4,10 @@ import csv
 import numpy as np
 import os
 import scipy.stats as stats
+import logging
+
+# Configurazione logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # Configurazione della connessione al database
 uri = "bolt://localhost:7687"
@@ -24,13 +28,15 @@ class Neo4jConnection:
         self._database_name = database_name
         try:
             self._driver = GraphDatabase.driver(self._uri, auth=(self._user, self._password))
+            logging.info(f"Connesso a Neo4j database: {database_name}")
         except Exception as e:
-            print(f"Errore nella connessione al database: {e}")
+            logging.error(f"Errore nella connessione al database: {e}")
             raise
 
     def close(self):
         if self._driver:
             self._driver.close()
+            logging.info(f"Connessione al database chiusa: {self._database_name}")
 
     def execute_query(self, query, parameters=None):
         try:
@@ -38,15 +44,15 @@ class Neo4jConnection:
                 result = session.run(query, parameters)
                 return [record for record in result]
         except Exception as e:
-            print(f"Errore durante l'esecuzione della query: {query}\nErrore: {e}")
+            logging.error(f"Errore durante l'esecuzione della query: {query}\nErrore: {e}")
             return []
 
     def clear_cache(self):
         try:
             self.execute_query("CALL db.clearQueryCaches()")
-            print(f"Cache svuotata per il database: {self._database_name}")
+            logging.info(f"Cache svuotata per il database: {self._database_name}")
         except Exception as e:
-            print(f"Errore durante la pulizia della cache: {e}")
+            logging.error(f"Errore durante la pulizia della cache: {e}")
 
 def measure_query_time(db, query, warmup=True):
     if warmup:
@@ -72,7 +78,7 @@ def process_datasets():
     queries = {
         'Query 1': """
         MATCH (d:Doctor)-[:VISIT_TO]-(v:Visit)
-        WHERE v.date >= '2021-01-01' AND rand() < 1  // Introduzione random per evitare cache specifica
+        WHERE v.date >= '2021-01-01' AND rand() < 1
         WITH d, d.specialization AS specialization, COUNT(v) AS total_visits
         RETURN d.id AS doctor_id, specialization, total_visits
         """,
@@ -95,11 +101,10 @@ def process_datasets():
         """
     }
 
-    output_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ResponseTimes')
+    output_directory = os.path.join(os.getcwd(), 'ResponseTimes')
     os.makedirs(output_directory, exist_ok=True)
 
     for percent, db_name in database_mappings.items(): 
-
         db = Neo4jConnection(uri, user, password, db_name)
         db.clear_cache()  # Svuota cache interna prima dell'uso
 
@@ -113,7 +118,7 @@ def process_datasets():
                 if i == 0:
                     first_execution_time = elapsed_time
 
-                print(f"Dataset: {percent} - {query_name} execution {i+1}: {elapsed_time:.2f} ms")
+                logging.info(f"Dataset: {percent} - {query_name} execution {i+1}: {elapsed_time:.2f} ms")
                 time.sleep(0.01)
 
             filtered_response_times = remove_outliers(response_times[1:])
@@ -123,7 +128,7 @@ def process_datasets():
                 average_time_rounded = round(average_time_exact, 2)
                 std_dev = np.std(filtered_response_times, ddof=1)
                 n = len(filtered_response_times)
-                confidence_interval = stats.norm.interval(0.95, loc=average_time_exact, scale=std_dev/np.sqrt(n))
+                confidence_interval = stats.t.interval(0.95, loc=average_time_exact, scale=std_dev / np.sqrt(n), df=n-1)
             else:
                 average_time_rounded = average_time_exact = confidence_interval = None
 
