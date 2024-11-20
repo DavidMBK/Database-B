@@ -14,8 +14,8 @@ def main():
     cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)
     session = cluster.connect()
 
-    keyspace_name = 'healthcare_50'  # Specifica il keyspace di interesse
-    table_name = 'doctor_visits'  # Specifica la tabella di interesse
+    keyspace_name = 'healthcare_25'  # Specifica il keyspace di interesse
+    table_name = 'doctors'  # Specifica la tabella di interesse
 
     try:
         print(f"Fetching data from table '{table_name}' in keyspace '{keyspace_name}'...")

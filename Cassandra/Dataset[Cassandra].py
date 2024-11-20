@@ -198,10 +198,10 @@ def load_subdataset(base_path, percentage):
     Carica i dataset per la percentuale specificata dalla cartella subdataset.
     """
     percent_str = f"{int(percentage * 100)}"
-    patients_file = os.path.join(base_path, f"patients_{percent_str}.csv")
-    doctors_file = os.path.join(base_path, f"doctors_{percent_str}.csv")
-    procedures_file = os.path.join(base_path, f"procedures_{percent_str}.csv")
-    visits_file = os.path.join(base_path, f"visits_{percent_str}.csv")
+    patients_file = os.path.join(base_path, f"patients_{percent_str}percent.csv")
+    doctors_file = os.path.join(base_path, f"doctors_{percent_str}percent.csv")
+    procedures_file = os.path.join(base_path, f"procedures_{percent_str}percent.csv")
+    visits_file = os.path.join(base_path, f"visits_{percent_str}percent.csv")
     
     # Carica i file CSV
     patients = pd.read_csv(patients_file, encoding='ISO-8859-1')
@@ -219,7 +219,7 @@ def main():
     
     # Percentuali gerarchiche dei dati
     percentages = [1.0, 0.75, 0.50, 0.25]
-    base_path = './Dataset/subdataset'  # Path principale dei subdataset
+    base_path = './Dataset/Subsets'  # Path principale dei subdataset
     
     for pct in percentages:
         keyspace_name = f"healthcare_{int(pct*100)}"
