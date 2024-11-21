@@ -1,3 +1,31 @@
 id,description,code
-2,Complete Blood Count (CBC),PR0002
-1,Thyroid Function Test,PR0001
+8,Abdominal Ultrasound,PR0008
+17,CT Scan of the Abdomen,PR0017
+4,Lipid Panel,PR0004
+32,Stress Test,PR0032
+10,Complete Blood Count (CBC),PR0010
+2,Basic Metabolic Panel,PR0002
+23,MRI of the Brain,PR0023
+15,Electrocardiogram (ECG),PR0015
+25,Abdominal Ultrasound,PR0025
+36,Electrocardiogram (ECG),PR0036
+20,Electrocardiogram (ECG),PR0020
+35,MRI of the Brain,PR0035
+21,Lipid Panel,PR0021
+38,Basic Metabolic Panel,PR0038
+6,CT Scan of the Abdomen,PR0006
+14,Lipid Panel,PR0014
+33,MRI of the Brain,PR0033
+34,CT Scan of the Abdomen,PR0034
+31,Electrocardiogram (ECG),PR0031
+27,Basic Metabolic Panel,PR0027
+22,Chest X-Ray,PR0022
+9,Basic Metabolic Panel,PR0009
+19,Abdominal Ultrasound,PR0019
+37,Abdominal Ultrasound,PR0037
+18,Kidney Function Test,PR0018
+26,Liver Function Test,PR0026
+12,Abdominal Ultrasound,PR0012
+11,Kidney Function Test,PR0011
+7,Complete Blood Count (CBC),PR0007
+1,Complete Blood Count (CBC),PR0001

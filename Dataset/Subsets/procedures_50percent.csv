@@ -1,2 +1,16 @@
 id,description,code
-2,Complete Blood Count (CBC),PR0002
+18,Kidney Function Test,PR0018
+8,Abdominal Ultrasound,PR0008
+6,CT Scan of the Abdomen,PR0006
+26,Liver Function Test,PR0026
+12,Abdominal Ultrasound,PR0012
+38,Basic Metabolic Panel,PR0038
+35,MRI of the Brain,PR0035
+11,Kidney Function Test,PR0011
+37,Abdominal Ultrasound,PR0037
+2,Basic Metabolic Panel,PR0002
+14,Lipid Panel,PR0014
+7,Complete Blood Count (CBC),PR0007
+31,Electrocardiogram (ECG),PR0031
+20,Electrocardiogram (ECG),PR0020
+10,Complete Blood Count (CBC),PR0010

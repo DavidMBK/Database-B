@@ -7,10 +7,10 @@ import os
 fake = Faker()
 
 # Costanti di configurazione
-NUM_PATIENTS = 400
-NUM_DOCTORS = 15
-NUM_PROCEDURES = 2
-NUM_VISITS = 1200
+NUM_PATIENTS = 6000
+NUM_DOCTORS = 1500
+NUM_PROCEDURES = 40
+NUM_VISITS = 12000
 SUBSET_DIR = 'Dataset/Subsets'  # Cartella dove vengono creati tutti i sottoinsiemi
 
 # Crea la directory 'Subsets' se non esiste
