@@ -53,22 +53,28 @@ def drop_keyspace(session, keyspace_name):
         print(f"Error dropping keyspace '{keyspace_name}': {e}")
 
 def main():
-    # Connessione al cluster Cassandra
+    # Connect to the Cassandra cluster
     cluster = Cluster(['127.0.0.1'], port=9042, connect_timeout=300)  # Removed request_timeout
     session = cluster.connect()
 
     try:
-        # Lista dei keyspace con varie percentuali
-        keyspaces = ['healthcare_100', 'healthcare_75', 'healthcare_50', 'healthcare_25']
+        # Retrieve all keyspaces
+        query = "SELECT keyspace_name FROM system_schema.keyspaces"
+        rows = session.execute(query)
+        keyspaces = [row.keyspace_name for row in rows]
 
         for keyspace in keyspaces:
+            # Skip the 'system' keyspaces that are internal to Cassandra
+            if keyspace.startswith('system'):
+                continue
+            
             print(f"\nProcessing keyspace: {keyspace}")
             describe_keyspace(session, keyspace)
             drop_tables(session, keyspace)
             drop_keyspace(session, keyspace)
 
     finally:
-        # Chiudi la connessione
+        # Close the connection
         cluster.shutdown()
 
 if __name__ == "__main__":

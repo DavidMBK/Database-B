@@ -1,0 +1,189 @@
+id,description,code
+98,Chest X-Ray,PR0098
+1396,Thyroid Function Test,PR1396
+392,Electrocardiogram (ECG),PR0392
+1821,Liver Function Test,PR1821
+685,Thyroid Function Test,PR0685
+1255,Stress Test,PR1255
+1171,CT Scan of the Abdomen,PR1171
+294,Kidney Function Test,PR0294
+266,Thyroid Function Test,PR0266
+1968,Electrocardiogram (ECG),PR1968
+202,Electrocardiogram (ECG),PR0202
+857,Basic Metabolic Panel,PR0857
+1228,Abdominal Ultrasound,PR1228
+409,Abdominal Ultrasound,PR0409
+1683,Abdominal Ultrasound,PR1683
+1540,Thyroid Function Test,PR1540
+1521,Lipid Panel,PR1521
+1040,Stress Test,PR1040
+1315,Lipid Panel,PR1315
+1941,MRI of the Brain,PR1941
+624,Basic Metabolic Panel,PR0624
+307,CT Scan of the Abdomen,PR0307
+302,Basic Metabolic Panel,PR0302
+367,Liver Function Test,PR0367
+948,Abdominal Ultrasound,PR0948
+468,Thyroid Function Test,PR0468
+226,Thyroid Function Test,PR0226
+1719,Chest X-Ray,PR1719
+607,Thyroid Function Test,PR0607
+736,Abdominal Ultrasound,PR0736
+1778,MRI of the Brain,PR1778
+1311,MRI of the Brain,PR1311
+728,Thyroid Function Test,PR0728
+719,Kidney Function Test,PR0719
+661,Thyroid Function Test,PR0661
+1046,MRI of the Brain,PR1046
+1670,Kidney Function Test,PR1670
+489,Thyroid Function Test,PR0489
+444,Chest X-Ray,PR0444
+1259,Basic Metabolic Panel,PR1259
+1840,Electrocardiogram (ECG),PR1840
+1886,Thyroid Function Test,PR1886
+143,Chest X-Ray,PR0143
+666,MRI of the Brain,PR0666
+829,Basic Metabolic Panel,PR0829
+610,Complete Blood Count (CBC),PR0610
+155,Stress Test,PR0155
+1152,Abdominal Ultrasound,PR1152
+1918,Kidney Function Test,PR1918
+28,CT Scan of the Abdomen,PR0028
+1768,Complete Blood Count (CBC),PR1768
+1725,Chest X-Ray,PR1725
+347,Abdominal Ultrasound,PR0347
+798,Liver Function Test,PR0798
+710,Abdominal Ultrasound,PR0710
+114,Stress Test,PR0114
+1337,Chest X-Ray,PR1337
+478,Abdominal Ultrasound,PR0478
+1969,Electrocardiogram (ECG),PR1969
+1022,Lipid Panel,PR1022
+196,Liver Function Test,PR0196
+600,Abdominal Ultrasound,PR0600
+885,Chest X-Ray,PR0885
+1533,Complete Blood Count (CBC),PR1533
+909,Liver Function Test,PR0909
+117,Liver Function Test,PR0117
+224,Chest X-Ray,PR0224
+402,MRI of the Brain,PR0402
+321,Basic Metabolic Panel,PR0321
+1212,Stress Test,PR1212
+1837,CT Scan of the Abdomen,PR1837
+197,Basic Metabolic Panel,PR0197
+547,Basic Metabolic Panel,PR0547
+1630,MRI of the Brain,PR1630
+1946,Stress Test,PR1946
+69,Electrocardiogram (ECG),PR0069
+862,Complete Blood Count (CBC),PR0862
+133,Abdominal Ultrasound,PR0133
+1547,Electrocardiogram (ECG),PR1547
+1949,CT Scan of the Abdomen,PR1949
+135,Thyroid Function Test,PR0135
+599,Stress Test,PR0599
+1043,Stress Test,PR1043
+1263,MRI of the Brain,PR1263
+1216,MRI of the Brain,PR1216
+596,Liver Function Test,PR0596
+451,MRI of the Brain,PR0451
+1329,MRI of the Brain,PR1329
+317,CT Scan of the Abdomen,PR0317
+1892,Chest X-Ray,PR1892
+884,Lipid Panel,PR0884
+593,Liver Function Test,PR0593
+108,Abdominal Ultrasound,PR0108
+527,Basic Metabolic Panel,PR0527
+309,Chest X-Ray,PR0309
+383,Electrocardiogram (ECG),PR0383
+375,Chest X-Ray,PR0375
+678,Liver Function Test,PR0678
+483,Chest X-Ray,PR0483
+796,Stress Test,PR0796
+888,Liver Function Test,PR0888
+1624,Complete Blood Count (CBC),PR1624
+875,Basic Metabolic Panel,PR0875
+1717,Thyroid Function Test,PR1717
+371,Liver Function Test,PR0371
+1911,Liver Function Test,PR1911
+552,Abdominal Ultrasound,PR0552
+787,Complete Blood Count (CBC),PR0787
+1749,CT Scan of the Abdomen,PR1749
+123,Thyroid Function Test,PR0123
+1027,Chest X-Ray,PR1027
+1799,Complete Blood Count (CBC),PR1799
+1713,Stress Test,PR1713
+1385,Lipid Panel,PR1385
+521,Basic Metabolic Panel,PR0521
+1101,MRI of the Brain,PR1101
+1483,Electrocardiogram (ECG),PR1483
+1999,CT Scan of the Abdomen,PR1999
+827,Liver Function Test,PR0827
+1019,Electrocardiogram (ECG),PR1019
+1929,Liver Function Test,PR1929
+1697,Lipid Panel,PR1697
+611,Chest X-Ray,PR0611
+866,Kidney Function Test,PR0866
+1660,Electrocardiogram (ECG),PR1660
+1168,Thyroid Function Test,PR1168
+901,Chest X-Ray,PR0901
+308,Stress Test,PR0308
+1303,Liver Function Test,PR1303
+1102,Stress Test,PR1102
+1087,MRI of the Brain,PR1087
+1514,Lipid Panel,PR1514
+333,CT Scan of the Abdomen,PR0333
+929,Stress Test,PR0929
+1758,CT Scan of the Abdomen,PR1758
+1266,Kidney Function Test,PR1266
+208,MRI of the Brain,PR0208
+1026,Kidney Function Test,PR1026
+510,Electrocardiogram (ECG),PR0510
+262,Stress Test,PR0262
+1944,Lipid Panel,PR1944
+591,Lipid Panel,PR0591
+1295,CT Scan of the Abdomen,PR1295
+1908,MRI of the Brain,PR1908
+1300,Stress Test,PR1300
+385,CT Scan of the Abdomen,PR0385
+1937,Kidney Function Test,PR1937
+682,Kidney Function Test,PR0682
+1564,Basic Metabolic Panel,PR1564
+1608,Lipid Panel,PR1608
+1394,Chest X-Ray,PR1394
+422,Kidney Function Test,PR0422
+1811,Electrocardiogram (ECG),PR1811
+668,Complete Blood Count (CBC),PR0668
+6,Kidney Function Test,PR0006
+1722,Basic Metabolic Panel,PR1722
+86,Chest X-Ray,PR0086
+1490,MRI of the Brain,PR1490
+277,Thyroid Function Test,PR0277
+473,Complete Blood Count (CBC),PR0473
+910,CT Scan of the Abdomen,PR0910
+1359,Kidney Function Test,PR1359
+323,Thyroid Function Test,PR0323
+17,CT Scan of the Abdomen,PR0017
+101,Chest X-Ray,PR0101
+82,Lipid Panel,PR0082
+359,MRI of the Brain,PR0359
+786,Liver Function Test,PR0786
+1141,Thyroid Function Test,PR1141
+519,Electrocardiogram (ECG),PR0519
+1729,Chest X-Ray,PR1729
+1495,MRI of the Brain,PR1495
+1218,Thyroid Function Test,PR1218
+1036,Chest X-Ray,PR1036
+669,Chest X-Ray,PR0669
+576,Kidney Function Test,PR0576
+1453,MRI of the Brain,PR1453
+419,Electrocardiogram (ECG),PR0419
+1198,Basic Metabolic Panel,PR1198
+1963,Thyroid Function Test,PR1963
+1579,Kidney Function Test,PR1579
+1280,Stress Test,PR1280
+1861,CT Scan of the Abdomen,PR1861
+1111,Complete Blood Count (CBC),PR1111
+445,MRI of the Brain,PR0445
+1278,Kidney Function Test,PR1278
+329,Chest X-Ray,PR0329
+881,Liver Function Test,PR0881
